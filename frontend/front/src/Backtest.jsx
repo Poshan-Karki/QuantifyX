@@ -45,6 +45,7 @@ function Backtest() {
             <option value="Bollinger Band">Bollinger Band</option>
             <option value="Moving Average Crossover">MA Crossover</option>
             <option value="Mean Reversion">Mean Reversion</option>
+            <option value="Bollinger+Rsi">Bollinger+Rsi</option>
           </select>
         </div>
         <div className="control-group">
