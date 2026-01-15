@@ -1,4 +1,4 @@
-// Backtest.jsx
+
 import React, { useState, useEffect } from "react";
 import Chart from "./Chart";
 import "./Backtest.css";
@@ -48,6 +48,7 @@ function Backtest() {
             <option value="Moving Average Crossover">MA Crossover</option>
             <option value="Mean Reversion">Mean Reversion</option>
             <option value="Bollinger+Rsi">Bollinger+Rsi</option>
+            <option value="VolumeBreakout">VolumeBreakout</option>
           </select>
         </div>
         <div className="control-group">
@@ -84,7 +85,7 @@ function Backtest() {
                 <Chart data={{
         ohlc: message.ohlc,
         indicators: message.indicators,
-        trades: message.trades // Pass the trades array here
+        trades: message.trades 
     }} />
               </div>
               <div className="table-container">
