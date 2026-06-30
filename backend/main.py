@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from schema import BacktestRequest
 from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout
-
+from sklearn.preprocessing import StandardScaler
+from hmmlearn.hmm import GaussianHMM
 
 
 
@@ -194,9 +195,9 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
 
 @app.post('/chat')
 def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "symbol":symbol ORDER BY "date"')
-    result=db.execute(query,{"symbol":data.sym})
-    
+    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "Symbol":symbol ORDER BY "date"')
+    result=db.execute(query,{"symbol":data.sym.upper()})
+
     if not result:
         return {"status": "fail", "message": "No data found for symbol"}
 
@@ -205,4 +206,43 @@ def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
         "ticker":data.syk,
         "raw_data":df.to_dict(orient='records'),
         "cash":cash2
+    }
+    
+    
+@app.post('/hmm')
+async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
+    query=text('SELECT "Open","High","Close","Low","Vol","Date" FROM stock_data WHERE "Symbol"=:symbol ORDER BY "Date"')
+    print(query.text)
+    result=db.execute(query,{"symbol":symbol.syk.upper()}).fetchall()
+    print(result)
+    if not result:
+        return {"status":"fail no data"}
+    df=pd.DataFrame(result,columns=['Open','High','Close','Low','Vol','Date'])
+    df['log_return']=np.log(df['Close']/df['Close'].shift(1))
+    df['hl_spread']=(df['High']-df['Low'])/df['Open']
+    df['volume_change']=df['Vol'].pct_change()
+    df.dropna(inplace=True)
+    features=df[['log_return','hl_spread','volume_change']]
+    scaler=StandardScaler()
+    X=scaler.fit_transform(features)
+    model=GaussianHMM(
+        n_components=3,
+        covariance_type='full',
+        n_iter=200
+    )
+    model.fit(X)
+    states =model.predict(X)
+    current_state = int(states[-1])
+
+
+    tomorrow_probs = model.transmat_[current_state]
+
+    tomorrow_state = int(np.argmax(tomorrow_probs))
+
+    return {
+        "status": "success",
+        "states": states.tolist(),
+        "current_state": current_state,
+        "tomorrow_state": tomorrow_state,
+        "tomorrow_probabilities": tomorrow_probs.tolist()
     }
