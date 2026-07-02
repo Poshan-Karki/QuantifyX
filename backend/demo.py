@@ -4,8 +4,8 @@ from ta.momentum import RSIIndicator
 
 def pattern_finder(df):
     df['Vol_Avg30']=df['Volume'].rolling(30).mean()
-    df['trigger']=df['Volume']>(df['VolumeAvg30']*3)
-    triggers=df[df['triggers']==True].copy()
+    df['trigger']=df['Volume']>(df['Vol_Avg30']*3)
+    triggers=df[df['trigger']==True].copy()
     result=[]
     for i in triggers.index:
         if i+10<len(df):
@@ -20,7 +20,7 @@ def pattern_finder(df):
     
     
 def rsi(close):
-    return RSIIndicator(Close=pd.Series(close)).rsi()
+    return RSIIndicator(close=pd.Series(close)).rsi()
 
 import pandas as pd
 

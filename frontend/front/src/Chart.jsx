@@ -60,7 +60,7 @@ const Chart = ({ data }) => {
             if (data.indicators) {
                 Object.entries(data.indicators).forEach(([name, values], index) => {
                     const lineSeries = chart.addSeries(LineSeries, {
-                        color: index === 0 ? '#6366f1' : '#f59e0b',
+                        color: ['#6366f1', '#f59e0b','#10b981'][index] ?? '#94a3b8',
                         lineWidth: 2,
                     });
                     const lineData = values.map((val, i) => ({

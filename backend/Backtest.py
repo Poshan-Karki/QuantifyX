@@ -31,7 +31,7 @@ def mean_reversion(close, window=20):
 
 def volume(volume,window=30):
     volume=pd.Series(volume)
-    average_vol=volume.rolling(window).mean
+    average_vol=volume.rolling(window).mean()
     return average_vol
     
 

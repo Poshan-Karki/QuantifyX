@@ -2,15 +2,17 @@
 import React, { useState, useEffect } from "react";
 import Chart from "./Chart";
 import "./Backtest.css";
+import MarketRegime from "./MarketRegime";
 
 function Backtest() {
   const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {} });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
   const [strategy, setStrategy] = useState("");
-  const [investment, setInve] = useState("");
+  const [investement, setInve] = useState("");
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState("");
+  const [error, setError] = useState("");
 
 
   useEffect(() => {
@@ -19,14 +21,26 @@ function Backtest() {
 
   const runBacktest = async () => {
     setLoading(true);
-    const res = await fetch("http://localhost:8000/bbband", {
+    setError("");
+    await new Promise(r => setTimeout(r, 0));
+    try{
+      const res = await fetch("http://localhost:8000/bbband", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ investement: parseFloat(investment), sym, stra: strategy ,startdate:startDate}),
-    });
-    const data = await res.json();
-    setMessage(data);
-    setLoading(false);
+      body: JSON.stringify({ investement: parseFloat(investement), sym, stra: strategy ,startdate:startDate}),});
+      if (!res.ok) throw new Error("Server returned an error");
+      const data = await res.json();
+      if (data.status === "fail") {
+        throw new Error(data.message); 
+      }
+      setMessage(data);
+    }
+    catch(err){
+      setError(err.message);
+    }
+    finally{
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,7 +61,7 @@ function Backtest() {
             <option value="Bollinger Band">Bollinger Band</option>
             <option value="Moving Average Crossover">MA Crossover</option>
             <option value="Mean Reversion">Mean Reversion</option>
-            <option value="Bollinger+Rsi">Bollinger+Rsi</option>
+            <option value="BollingerRsi">BollingerRsi</option>
             <option value="VolumeBreakout">VolumeBreakout</option>
           </select>
         </div>
@@ -62,15 +76,42 @@ function Backtest() {
 
         <div className="control-group">
           <label>Capital</label>
-          <input type="number" value={investment} onChange={(e) => setInve(e.target.value)} placeholder="10000" />
+          <input type="number" value={investement} onChange={(e) => setInve(e.target.value)} placeholder="10000" />
         </div>
         <button className="run-btn" onClick={runBacktest} disabled={loading}>
           {loading ? "PROCESSING..." : "RUN ANALYSIS"}
         </button>
+        <MarketRegime
+  sym={sym}
+  startdate={startDate}
+  investment={investement}
+  onStrategyPick={(s) => setStrategy(s)}
+/>
       </aside>
 
       <main className="dashboard-main">
         <div className="scroll-content">
+          {loading && (
+            <div style={{display:"flex", gap:"12px", marginBottom:"1rem"}}>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: "72px", flex: 1, borderRadius: "8px"}}/>
+              ))}
+            </div>
+          )}
+          {loading && (
+            <div className="skeleton" style={{ height: "380px", borderRadius: "12px"}}/>
+          )}
+          {error && (                         
+            <div style={{
+              background: "rgba(220, 38, 38, 0.15)",
+              color: "#fca5a5",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              marginBottom: "1rem"
+            }}>
+              ⚠ {error}
+            </div>
+          )}   
           {message.ohlc.length > 0 ? (
             <>
               <div className="metrics-row">

@@ -45,11 +45,26 @@ td { padding: 12px 15px; border-bottom: 1px solid #0f0f0f; }
 .sell { color: #ef4444; }
 
 .empty-msg { height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-family: monospace; }
+
 /* Backtest.css or App.css */
+
 .chart-wrapper {
   width: 100%;
   height: 450px; /* Must be explicit */
   min-height: 450px;
   background: #050505;
   position: relative;
+}
+
+/* Skeleton loader style */
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #1a1a2e 25%, #2d2d4e 50%, #1a1a2e 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite;
 }

@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from schema import BacktestRequest
 from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout
-
+from market_regime import detect_regime
 
 
 
@@ -63,7 +63,7 @@ def get_hydro_name(db:Session=Depends(get_db)):
 @app.post("/gethydro")
 def get_hydro_data(sym:str,db:Session=Depends(get_db)):
     symbol=sym.upper()
-    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM stock_data WHERE "symbol" = :symbol ORDER BY "date"')
+    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM stock_data WHERE "Symbol" = :symbol ORDER BY "date"')
     result=db.execute(query,{"symbol":symbol}).fetchall()
     if  not result:
        return {"status": "fail", "message": "No data found"}
@@ -194,7 +194,7 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
 
 @app.post('/chat')
 def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "symbol":symbol ORDER BY "date"')
+    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "Symbol" =:symbol ORDER BY "date"')
     result=db.execute(query,{"symbol":data.sym})
     
     if not result:
@@ -206,3 +206,24 @@ def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
         "raw_data":df.to_dict(orient='records'),
         "cash":cash2
     }
+    
+@app.post("/regime")
+def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
+    symbol = data.sym.upper()
+    query = text(
+        'SELECT "Date","Open","High","Low","Close","Vol" '
+        'FROM stock_data WHERE "Symbol" = :symbol AND "Date" >= :date ORDER BY "Date"'
+    )
+    result = db.execute(query, {"symbol": symbol, "date": data.startdate}).fetchall()
+
+    if not result:
+        return {"status": "fail", "message": "No data found"}
+
+    df = pd.DataFrame(result, columns=["Date", "Open", "High", "Low", "Close", "Volume"])
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index("Date", inplace=True)
+    df[["Open", "High", "Low", "Close", "Volume"]] = \
+        df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+
+    regime_data = detect_regime(df)
+    return jsonable_encoder(deep_sanitize(regime_data))

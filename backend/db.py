@@ -5,7 +5,7 @@ import os
 from sqlalchemy.pool import NullPool
 
 load_dotenv()
-datbase_url=os.getenv('database')
+datbase_url=os.getenv('DATABASE_URL')
 engine=create_engine(
     datbase_url,
     poolclass=NullPool

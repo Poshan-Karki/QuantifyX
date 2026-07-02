@@ -10,24 +10,33 @@ from langchain_core import tools
 from demo import pattern_finder,get_bollinger_triggers
 from Backtest import BollingerRsi,bollinger_band,MeanReversion,macrossover
 from backtesting import Backtest
+from langchain.agent import create_agent 
+from pydantic import BaseModel
+from langgraph.prebuilt import create_react_agent
 
 
+load_dotenv()
 
-api_key=os.getenv("api")
+api_key=os.getenv("groq_api_key")
+model="gpt-4o"
 
-model="meta-llama/llama-4-maverick-17b-128e-instruct"
+agent=create_agent(ChatGroq(model=model,api_key=api_key))
 
-class AgentState(TypedDict):
-    stock_ticker: str
-    raw_data: List[dict]
-    cash:float
-    signal_dates1: List[str]  
-    signal_dates2:List[str]
-    rsi1:List[str]
-    rsi2:List[str]
+class input(BaseModel):
+    investment:float
+    debt:float
+    intrest_rate:float
+    time_period:int
+    salary:float
+    other_expenses:float
+    stock_investment:float
+    stock_name:str
+
+
+class Output(BaseModel):
+    summary:str
+
     
-    news_report: str
-    final_hypothesis: str
 
 @tools
 def BollingerRsi(inv,data):
@@ -39,16 +48,7 @@ def bollinger(data):
     result=get_bollinger_triggers(data)
     return data
 
-def technical_research_node(state:AgentState,data):
-    ticker=state["stock_ticker"]
-    result1=bollinger.invoke({"data":data})
-    result2=volume.invoke({"data":data})
-    return{
-        result1['date'],
-        result2['date']
-        
-    }
-    
+
 
     
     
