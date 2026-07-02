@@ -5,7 +5,7 @@ import "./Backtest.css";
 import MarketRegime from "./MarketRegime";
 
 function Backtest() {
-  const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {} });
+  const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {}, verdict: null });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
   const [strategy, setStrategy] = useState("");
@@ -114,6 +114,28 @@ function Backtest() {
           )}   
           {message.ohlc.length > 0 ? (
             <>
+               {message.verdict && (
+                  <div style={{
+                    background: message.verdict.action === "BUY" ? "rgba(34,197,94,0.15)"
+                              : message.verdict.action === "AVOID" ? "rgba(239,68,68,0.15)"
+                              : "rgba(234,179,8,0.15)",
+                    border: `1px solid ${
+                      message.verdict.action === "BUY" ? "#22c55e"
+                      : message.verdict.action === "AVOID" ? "#ef4444"
+                      : "#eab308"
+                    }`,
+                    borderRadius: "8px",
+                    padding: "14px 16px",
+                    marginBottom: "1rem"
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "4px" }}>
+                    {message.verdict.action}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                    {message.verdict.message}
+                  </div>
+                </div>
+              )}
               <div className="metrics-row">
                 {Object.entries(message.summary).map(([key, val]) => (
                   <div key={key} className="metric-box">

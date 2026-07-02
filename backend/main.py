@@ -13,13 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from schema import BacktestRequest
 from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout
-<<<<<<< HEAD
 from market_regime import detect_regime
-=======
-from sklearn.preprocessing import StandardScaler
-from hmmlearn.hmm import GaussianHMM
->>>>>>> a54105882c5aef1bb99df3b2e9dd39b51e481ba8
-
+from verdict import generate_verdict
 
 
 
@@ -163,8 +158,9 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
             "Sharpe Ratio": float(stats['Sharpe Ratio']),
         },
         "ohlc": ohlc_data,
-        "trades": trades_list
+        "trades": trades_list 
     }
+    raw_response["verdict"] = generate_verdict(stats, data.stra)
 
 
     if data.stra == "Bollinger Band":
@@ -199,15 +195,9 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
 
 @app.post('/chat')
 def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
-<<<<<<< HEAD
     query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "Symbol" =:symbol ORDER BY "date"')
     result=db.execute(query,{"symbol":data.sym})
     
-=======
-    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "Symbol":symbol ORDER BY "date"')
-    result=db.execute(query,{"symbol":data.sym.upper()})
-
->>>>>>> a54105882c5aef1bb99df3b2e9dd39b51e481ba8
     if not result:
         return {"status": "fail", "message": "No data found for symbol"}
 
@@ -218,7 +208,6 @@ def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
         "cash":cash2
     }
     
-<<<<<<< HEAD
 @app.post("/regime")
 def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
     symbol = data.sym.upper()
@@ -239,7 +228,6 @@ def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
 
     regime_data = detect_regime(df)
     return jsonable_encoder(deep_sanitize(regime_data))
-=======
     
 @app.post('/hmm')
 async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
@@ -278,4 +266,3 @@ async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
         "tomorrow_state": tomorrow_state,
         "tomorrow_probabilities": tomorrow_probs.tolist()
     }
->>>>>>> a54105882c5aef1bb99df3b2e9dd39b51e481ba8
