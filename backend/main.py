@@ -106,8 +106,10 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     df[['Open', 'High', 'Low', 'Close', 'Volume']] = \
     df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
     
-
-    
+    try:
+        regime_data = detect_regime(df)
+    except Exception:
+        regime_data = None
 
     strategies = {
         "Bollinger Band": bollinger_band,
@@ -160,7 +162,8 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
         "ohlc": ohlc_data,
         "trades": trades_list 
     }
-    raw_response["verdict"] = generate_verdict(stats, data.stra)
+    raw_response["verdict"] = generate_verdict(stats, data.stra, regime_data)
+    raw_response["regime"] = regime_data 
 
 
     if data.stra == "Bollinger Band":

@@ -1,13 +1,13 @@
-def generate_verdict(stats, strategy_name):
+﻿def generate_verdict(stats, strategy_name, regime_data=None):
     ret = stats['Return [%]']
     win_rate = stats['Win Rate [%]']
     n_trades = stats['# Trades']
     dd = stats['Max. Drawdown [%]']
 
     if n_trades == 0:
-        return {"action": "HOLD", "message": f"The {strategy_name} strategy found no trade signals in this period — no clear buy or sell opportunity."}
-
-    if ret > 5 and win_rate >= 50:
+        message = f"The {strategy_name} strategy found no trade signals in this period - no clear buy or sell opportunity."
+        action = "HOLD"
+    elif ret > 5 and win_rate >= 50:
         action = "BUY"
         message = (f"Over this period, {strategy_name} would have grown your capital by {ret:.1f}%, "
                     f"winning {win_rate:.0f}% of {n_trades} trades. This strategy looks favorable for this stock.")
@@ -18,6 +18,11 @@ def generate_verdict(stats, strategy_name):
     else:
         action = "HOLD/CAUTION"
         message = (f"{strategy_name} gave a modest {ret:.1f}% return with {win_rate:.0f}% win rate. "
-                    f"Results are mixed — proceed with caution.")
+                    f"Results are mixed - proceed with caution.")
+
+    if regime_data and strategy_name not in regime_data.get("recommended_strategies", []):
+        alt = ", ".join(regime_data["recommended_strategies"])
+        message += (f" Note: the current market regime is '{regime_data['regime']}', "
+                     f"which typically favors {alt} instead - consider comparing results.")
 
     return {"action": action, "message": message}

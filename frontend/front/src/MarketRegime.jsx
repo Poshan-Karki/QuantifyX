@@ -1,6 +1,5 @@
-// frontend/front/src/MarketRegime.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const REGIME_COLORS = {
   "Trending Up":      { bg: "rgba(34,197,94,0.15)", border: "#22c55e", text: "#86efac" },
@@ -10,11 +9,14 @@ const REGIME_COLORS = {
   "Ranging/Sideways": { bg: "rgba(148,163,184,0.15)",border: "#94a3b8", text: "#cbd5e1" },
 };
 
-export default function MarketRegime({ sym, startdate, investment, onStrategyPick }) {
+export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime }) {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
-
+  useEffect(() => {
+    if (autoRegime) setRegime(autoRegime);
+  }, [autoRegime]);
+  
   const analyze = async () => {
     if (!sym || !startdate) return;
     setLoading(true);

@@ -6,3 +6,5 @@ backtesting
 langchain
 langgraph
 phidata
+hmmlearn 
+scikit-learn

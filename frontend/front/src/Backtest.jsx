@@ -5,7 +5,7 @@ import "./Backtest.css";
 import MarketRegime from "./MarketRegime";
 
 function Backtest() {
-  const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {}, verdict: null });
+  const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {}, verdict: null, regime: null });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
   const [strategy, setStrategy] = useState("");
@@ -61,7 +61,7 @@ function Backtest() {
             <option value="Bollinger Band">Bollinger Band</option>
             <option value="Moving Average Crossover">MA Crossover</option>
             <option value="Mean Reversion">Mean Reversion</option>
-            <option value="BollingerRsi">BollingerRsi</option>
+            <option value="Bollinger+Rsi">BollingerRsi</option>
             <option value="VolumeBreakout">VolumeBreakout</option>
           </select>
         </div>
@@ -86,6 +86,7 @@ function Backtest() {
   startdate={startDate}
   investment={investement}
   onStrategyPick={(s) => setStrategy(s)}
+  autoRegime={message.regime}
 />
       </aside>
 
