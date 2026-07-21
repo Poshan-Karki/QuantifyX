@@ -12,7 +12,7 @@ import math
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from schema import BacktestRequest
-from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout
+from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout, MACDCross, RSIMeanReversion, ATRBreakout
 from market_regime import detect_regime
 from verdict import generate_verdict
 
@@ -85,6 +85,12 @@ def deep_sanitize(obj):
     elif isinstance(obj, (pd.Timestamp, pd.Timedelta)):
         return str(obj)
     return obj
+def apply_trade_params(strategy_cls, req):
+    strategy_cls.fee_pct = req.fee_pct
+    strategy_cls.slippage_pct = req.slippage_pct
+    strategy_cls.max_pos_pct = req.max_pos_pct
+    strategy_cls.cooldown_bars = req.cooldown_bars
+    
 
 @app.post("/bbband")
 def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
@@ -116,14 +122,25 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
         "Moving Average Crossover": macrossover,
         "Mean Reversion": MeanReversion,
         "Bollinger+Rsi":BollingerRsi,
-        "VolumeBreakout":VolumeBreakout
+        "VolumeBreakout":VolumeBreakout,
+        "MACD Cross": MACDCross,
+        "RSI Mean Reversion": RSIMeanReversion,
+        "ATR Breakout": ATRBreakout
     }
     
     strategy_select = strategies.get(data.stra)
     if not strategy_select:
         return {"status": "fail", "message": "Invalid strategy selected"}
 
-    bt = Backtest(df, strategy_select, cash=data.investement, commission=0,finalize_trades=True)
+    apply_trade_params(strategy_select, data)
+
+    bt = Backtest(
+    df,
+    strategy_select,
+    cash=data.investment,
+    commission=data.fee_pct / 100,
+    finalize_trades=True
+    )
     stats = bt.run()
     trades_list = []
     if '_trades' in stats and not stats['_trades'].empty:
@@ -150,7 +167,7 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     
     raw_response = {
         "summary": {
-            "Start Cash": data.investement,
+            "Start Cash": data.investment,
             "Final Equity": stats['Equity Final [$]'],
             "Return [%]": stats['Return [%]'],
             "Buy & Hold Return [%]": stats['Buy & Hold Return [%]'],
@@ -191,7 +208,20 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
         raw_response["indicators"] = {
             "average_vol":stats["_strategy"].avg_vol.tolist()
         }
-
+    elif data.stra == "MACD Cross":
+        raw_response["indicators"] = {
+            "macd": stats['_strategy'].macd.tolist(),
+            "signal": stats['_strategy'].signal_line.tolist()
+        }
+    elif data.stra == "RSI Mean Reversion":
+        raw_response["indicators"] = {
+            "rsi": stats['_strategy'].rsi.tolist()
+        }
+    elif data.stra == "ATR Breakout":
+        raw_response["indicators"] = {
+            "atr": stats['_strategy'].atr.tolist(),
+            "ema": stats['_strategy'].ema.tolist()
+        }
 
     return jsonable_encoder(deep_sanitize(raw_response))
 

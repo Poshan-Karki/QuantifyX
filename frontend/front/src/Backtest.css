@@ -46,6 +46,16 @@ td { padding: 12px 15px; border-bottom: 1px solid #0f0f0f; }
 
 .empty-msg { height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-family: monospace; }
 
+.warning-banner {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  color: #fde047;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  margin-bottom: 1rem;
+}
+
 /* Backtest.css or App.css */
 
 .chart-wrapper {

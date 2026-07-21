@@ -9,7 +9,7 @@ const REGIME_COLORS = {
   "Ranging/Sideways": { bg: "rgba(148,163,184,0.15)",border: "#94a3b8", text: "#cbd5e1" },
 };
 
-export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime }) {
+export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, autoStrategy, onRegimeDetected }) {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
@@ -25,11 +25,12 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
       const res = await fetch("http://localhost:8000/regime", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sym, startdate, investement: parseFloat(investment) || 10000, stra: "Bollinger Band" }),
+        body: JSON.stringify({ sym, startdate, investment: parseFloat(investment) || 10000, stra: "Bollinger Band" }),
       });
       const data = await res.json();
       if (data.status === "fail") throw new Error(data.message);
       setRegime(data);
+      onRegimeDetected?.(data);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -54,6 +55,17 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
           color: "#a5b4fc", borderRadius: "6px", cursor: "pointer", marginBottom: "1rem"
         }}
       >
+        <div style={{ marginBottom: "0.75rem", fontSize: "0.7rem", color: "#94a3b8" }}>
+  <label>
+    <input
+      type="checkbox"
+      checked={autoStrategy}
+      onChange={(e) => setAutoStrategy(e.target.checked)}
+      style={{ marginRight: "6px" }}
+    />
+    Auto-select regime strategy
+  </label>
+</div>
         {loading ? "ANALYSING..." : "DETECT REGIME"}
       </button>
 
