@@ -2,8 +2,8 @@ from backtesting import Strategy
 import pandas as pd
 import numpy as np
 from ta.momentum import RSIIndicator
-from backtesting.lib import resample_apply
-from ta.trend import MACD
+from backtesting.lib import crossover, resample_apply
+from ta.trend import MACD, EMAIndicator
 from ta.volatility import AverageTrueRange
 
 def bbband(close, window=20, num_std=2):
@@ -37,15 +37,32 @@ def volume(volume,window=30):
     return average_vol
     
 def ema(close, window=50):
-    return EMAIndicator(close, window=window).ema_indicator()
+    close = pd.Series(close)
+    return EMAIndicator(close=close, window=window).ema_indicator().values
 
 def macd_indicator(close, fast=12, slow=26, signal=9):
-    macd = MACD(close, window_slow=slow, window_fast=fast, window_sign=signal)
-    return macd.macd(), macd.macd_signal()
+    close = pd.Series(close)
+    macd = MACD( close=close, window_fast=fast, window_slow=slow, window_sign=signal, )
+    return (
+        macd.macd().values,
+        macd.macd_signal().values,
+    )
 
 def get_atr(high, low, close, window=14):
-    atr = AverageTrueRange(high=high, low=low, close=close, window=window)
-    return atr.average_true_range()
+    high = pd.Series(high)
+    low = pd.Series(low)
+    close = pd.Series(close)
+    atr = AverageTrueRange(
+        high=high,
+        low=low,
+        close=close,
+        window=window
+    )
+    return atr.average_true_range().values
+
+def highest_high(high, window=20):
+    high = pd.Series(high)
+    return high.rolling(window).max().values
 
 class BaseStrategy(Strategy):
     fee_pct = 0.2
@@ -73,7 +90,8 @@ class BaseStrategy(Strategy):
             return
         price = self.data.Close[-1]
         slip_price = price * (1 + self.slippage_pct / 100)
-        self.buy(size=size, limit=slip_price, sl=sl)
+        stop_loss = sl if sl is not None else slip_price * 0.90
+        self.buy(size=size, limit=slip_price, sl=stop_loss)
         self._last_trade_bar = self._bar_index()
 
 class bollinger_band(BaseStrategy):
@@ -138,8 +156,8 @@ class BollingerRsi(BaseStrategy):
             elif price < self.bband_middle[-1] and self.rsi[-1] > 50:
                  self.position.close()
                  
-                 
-                 
+
+
 
 
 
@@ -156,8 +174,7 @@ class VolumeBreakout(BaseStrategy):
     def init(self):
         super().init()
         self.avg_vol = self.I(SMA, self.data.Volume, self.vol_period)
-        self.bband_upper,self.bband_middle,self.bband_lower=self.I(bbband,self.data.Close
-                                                                   )
+        self.bband_upper,self.bband_middle,self.bband_lower=self.I(bbband,self.data.Close)
         
     def next(self):
     
@@ -166,12 +183,13 @@ class VolumeBreakout(BaseStrategy):
         price = self.data.Close[-1]
 
         
-        if price<=self.bband_lower and  current_vol > (self.exit_multiplier * avg_vol_now):
+        if price<=self.bband_lower[-1] and  current_vol > (self.exit_multiplier * avg_vol_now):
             if not self.position:
-                self._enter_long(sl=0.95)
+                stop_loss = price * 0.90      # Stop loss will be 10% below entry price 
+                self._enter_long(sl=stop_loss)
                 
         
-        elif self.position and price>=self.bband_middle and current_vol < (self.entry_multiplier * avg_vol_now):
+        elif self.position and price>=self.bband_middle[-1] and current_vol < (self.entry_multiplier * avg_vol_now):
             self.position.close()
 
 class MACDCross(BaseStrategy):
@@ -210,17 +228,27 @@ class ATRBreakout(BaseStrategy):
     atr_window = 14
     atr_mult = 2.0
     ema_trend = 50
+    lookback = 20
 
     def init(self):
         super().init()
-        self.atr = self.I(get_atr, self.data.High, self.data.Low, self.data.Close, self.atr_window)
+        self.atr = self.I(get_atr, self.data.High, self.data.Low,
+                          self.data.Close, self.atr_window)
         self.ema = self.I(ema, self.data.Close, self.ema_trend)
+        self.highest = self.I(highest_high, self.data.High, self.lookback)
 
     def next(self):
         price = self.data.Close[-1]
-        breakout = self.ema[-1] + self.atr_mult * self.atr[-1]
-        if price > breakout and not self.position:
-            self._enter_long()
-        elif price < self.ema[-1] and self.position:
-            self.position.close()
-            
+        breakout = self.highest[-2]
+
+        if (
+            price > breakout
+            and price > self.ema[-1]
+            and not self.position
+        ):
+            stop_loss = price - self.atr_mult * self.atr[-1]
+            self._enter_long(sl=stop_loss)
+
+        elif self.position:
+            if price < self.ema[-1]:
+                self.position.close()

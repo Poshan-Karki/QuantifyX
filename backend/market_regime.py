@@ -1,18 +1,46 @@
-# backend/market_regime.py
 
 import pandas as pd
-import numpy as np
 from ta.trend import ADXIndicator, EMAIndicator
 from ta.volatility import AverageTrueRange, BollingerBands
 from ta.momentum import RSIIndicator
 
 
+STRATEGY_DESCRIPTIONS = {
+    "Moving Average Crossover": "Long when fast MA crosses above slow MA. Works well in clear up/down trends.",
+    "Mean Reversion": "Buy oversold deviations from a moving average (e.g. z-score). Suited to range-bound markets.",
+    "Bollinger Band": "Buy at lower Bollinger band and exit at midline. Best in volatile but oscillating markets.",
+    "Bollinger+Rsi": "Long when price < lower band AND RSI oversold; exit on rebound. Higher-quality mean-reversion filter in volatile ranges.",
+    "VolumeBreakout": "Long on volume-confirmed price breakouts. Works best in trending markets with volume surges.",
+    "MACD Cross": "Buy/sell on MACD line crossing signal line. Especially useful in trending markets.",
+    "RSI Mean Reversion": "Buy oversold RSI (short lookback e.g. 2-5) and exit at moderate RSI. Performs well on stocks in sideways regimes.",
+    "ATR Breakout": "Long on price breakouts confirmed by rising ATR (14). Targets strong trending moves with high volatility."
+}
+
 REGIME_STRATEGY_MAP = {
-    "Trending Up":       ["Moving Average Crossover", "VolumeBreakout"],
-    "Trending Down":     ["Mean Reversion", "Bollinger Band"],
-    "High Volatility":   ["Bollinger Band", "Bollinger+Rsi"],
-    "Low Volatility":    ["Mean Reversion", "Moving Average Crossover"],
-    "Ranging/Sideways":  ["Mean Reversion", "Bollinger+Rsi"],
+    "Trending Up": [
+        "Moving Average Crossover",
+        "MACD Cross",
+        "ATR Breakout",
+        "VolumeBreakout"
+    ],
+    "Trending Down": [
+        "Moving Average Crossover",  # can be reverse for downtrend
+        "MACD Cross",               # for short term bearish moves
+        "Mean Reversion",           # bounce plays in down moves
+        "Bollinger Band"            # Might fade extreme lows
+    ],
+    "High Volatility": [
+        "ATR Breakout",
+        "MACD Cross",
+        "VolumeBreakout",
+        "Bollinger Band",
+        "Bollinger+Rsi"
+    ],
+    "Ranging/Sideways": [
+        "Mean Reversion",
+        "Bollinger+Rsi",
+        "RSI Mean Reversion"
+    ]
 }
 
 STRATEGY_DESCRIPTIONS = {
@@ -21,6 +49,9 @@ STRATEGY_DESCRIPTIONS = {
     "Mean Reversion":            "Trade z-score extremes back toward the mean. Ideal in range-bound, low-noise markets.",
     "Bollinger+Rsi":             "Combines Bollinger oversold + RSI confirmation for higher-quality entries.",
     "VolumeBreakout":            "Buys volume-confirmed breakdowns below the lower band. Good in high-volume trending moves.",
+    "MACD Cross": "Trades MACD signal-line crossovers. Performs well during sustained trends.",
+    "RSI Mean Reversion": "Buys oversold RSI and exits when RSI becomes overbought. Best in sideways markets.",
+    "ATR Breakout": "Buys breakouts above recent highs with ATR-based risk management. Best during strong breakouts."
 }
 
 

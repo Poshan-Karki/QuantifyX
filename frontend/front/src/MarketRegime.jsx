@@ -9,7 +9,7 @@ const REGIME_COLORS = {
   "Ranging/Sideways": { bg: "rgba(148,163,184,0.15)",border: "#94a3b8", text: "#cbd5e1" },
 };
 
-export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, autoStrategy, onRegimeDetected }) {
+export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, autoStrategy, onAutoStrategyChange, onRegimeDetected }) {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
@@ -60,7 +60,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
     <input
       type="checkbox"
       checked={autoStrategy}
-      onChange={(e) => setAutoStrategy(e.target.checked)}
+      onChange={(e) => onAutoStrategyChange?.(e.target.checked)}
       style={{ marginRight: "6px" }}
     />
     Auto-select regime strategy

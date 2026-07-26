@@ -138,12 +138,15 @@ function Backtest() {
         <button className="run-btn" onClick={runBacktest} disabled={loading}>
           {loading ? "PROCESSING..." : "RUN ANALYSIS"}
         </button>
+        
         <MarketRegime
           sym={sym}
           startdate={startDate}
           investment={investment}
           onStrategyPick={(s) =>{ setStrategy(s); setAutoStrategy(false);}}
           autoRegime={message.regime}
+          autoStrategy={autoStrategy}
+          onAutoStrategyChange={setAutoStrategy}
           onRegimeDetected={(data) => setMessage(prev => ({ ...prev, regime: data }))}
         />
       </aside>

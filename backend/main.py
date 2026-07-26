@@ -51,7 +51,7 @@ def root():
 
 @app.get('/hydroname')
 def get_hydro_name(db:Session=Depends(get_db)):
-    query=text('SELECT "Symbol" FROM stock_data  GROUP BY "Symbol"')
+    query=text('SELECT "Symbol" FROM nepseintel  GROUP BY "Symbol"') 
     result=db.execute(query).fetchall()
     if not result:
         return {"status":"fail","message":"no data found"}
@@ -63,7 +63,7 @@ def get_hydro_name(db:Session=Depends(get_db)):
 @app.post("/gethydro")
 def get_hydro_data(sym:str,db:Session=Depends(get_db)):
     symbol=sym.upper()
-    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM stock_data WHERE "Symbol" = :symbol ORDER BY "date"')
+    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM nepseintel WHERE "Symbol" = :symbol ORDER BY "date"')
     result=db.execute(query,{"symbol":symbol}).fetchall()
     if  not result:
        return {"status": "fail", "message": "No data found"}
@@ -99,7 +99,7 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
 
     query = text(
         'SELECT "Date", "Open", "High", "Low", "Close", "Vol" '
-        'FROM stock_data WHERE "Symbol" = :symbol and "Date">=:date ORDER BY "Date"'
+        'FROM nepseintel WHERE "Symbol" = :symbol and "Date">=:date ORDER BY "Date"'
     )
     result = db.execute(query, {"symbol": symbol1,"date":data.startdate}).fetchall()
     
@@ -219,16 +219,17 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
         }
     elif data.stra == "ATR Breakout":
         raw_response["indicators"] = {
-            "atr": stats['_strategy'].atr.tolist(),
-            "ema": stats['_strategy'].ema.tolist()
-        }
+        "atr": stats["_strategy"].atr.tolist(),
+        "ema": stats["_strategy"].ema.tolist(),
+        "highest": stats["_strategy"].highest.tolist()
+    }
 
     return jsonable_encoder(deep_sanitize(raw_response))
 
 
 @app.post('/chat')
 def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM stock_data where "Symbol" =:symbol ORDER BY "date"')
+    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM nepseintel where "Symbol" =:symbol ORDER BY "date"')
     result=db.execute(query,{"symbol":data.sym})
     
     if not result:
@@ -246,7 +247,7 @@ def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
     symbol = data.sym.upper()
     query = text(
         'SELECT "Date","Open","High","Low","Close","Vol" '
-        'FROM stock_data WHERE "Symbol" = :symbol AND "Date" >= :date ORDER BY "Date"'
+        'FROM nepseintel WHERE "Symbol" = :symbol AND "Date" >= :date ORDER BY "Date"'
     )
     result = db.execute(query, {"symbol": symbol, "date": data.startdate}).fetchall()
 
@@ -264,7 +265,7 @@ def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
     
 @app.post('/hmm')
 async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Close","Low","Vol","Date" FROM stock_data WHERE "Symbol"=:symbol ORDER BY "Date"')
+    query=text('SELECT "Open","High","Close","Low","Vol","Date" FROM nepseintel WHERE "Symbol"=:symbol ORDER BY "Date"')
     print(query.text)
     result=db.execute(query,{"symbol":symbol.syk.upper()}).fetchall()
     print(result)
