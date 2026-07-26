@@ -43,7 +43,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
   return (
     <div className="regime-panel">
       <h4 className="regime-title">
-        MARKET REGIME
+        CURRENT MARKET REGIME
       </h4>
 
       <button
@@ -51,7 +51,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
         onClick={analyze}
         disabled={loading || !sym || !startdate}
       >
-        {loading ? "ANALYSING..." : "DETECT REGIME"}
+        {loading ? "ANALYSING..." : "DETECT CURRENT REGIME"}
       </button>
 
       {error && (
@@ -122,7 +122,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
                   {regime.strategy_descriptions[s]}
                 </div>
                 <div style={{ color: colors.text, fontSize: "0.62rem", marginTop: "4px" }}>
-                  → Click to auto-select
+                  → Use as manual strategy
                 </div>
               </div>
             ))}

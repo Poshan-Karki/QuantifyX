@@ -288,6 +288,53 @@
   margin-bottom: 16px;
 }
 
+.evaluation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+}
+
+.evaluation-banner.evaluation-holdout {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.45);
+}
+
+.evaluation-banner > div:first-child,
+.evaluation-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evaluation-label {
+  color: #a5b4fc;
+  font: 9px monospace;
+  letter-spacing: 0.14em;
+}
+
+.evaluation-banner strong {
+  color: #e2e8f0;
+  font: 14px monospace;
+}
+
+.evaluation-banner small,
+.evaluation-periods {
+  color: #64748b;
+  font: 10px/1.5 monospace;
+}
+
+.evaluation-periods {
+  flex-shrink: 0;
+  text-align: right;
+}
+
 .metric-box {
   padding: 18px;
   background: #0a0a0a;
@@ -418,9 +465,14 @@ td {
   }
 
   .section-heading,
-  .verdict-content {
+  .verdict-content,
+  .evaluation-banner {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .evaluation-periods {
+    text-align: left;
   }
 
   .section-hint {

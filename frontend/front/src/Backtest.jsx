@@ -4,7 +4,16 @@ import "./Backtest.css";
 import MarketRegime from "./MarketRegime";
 
 function Backtest() {
-  const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {}, verdict: null, regime: null });
+  const [message, setMessage] = useState({
+    summary: {},
+    ohlc: [],
+    trades: [],
+    indicators: {},
+    verdict: null,
+    regime: null,
+    selection_regime: null,
+    evaluation: null,
+  });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
   const [symbolSearch, setSymbolSearch] = useState("");
@@ -24,10 +33,14 @@ function Backtest() {
   }, []);
 
   useEffect(() => {
-    if (autoStrategy && message?.regime?.recommended_strategies?.length) {
-      setStrategy(message.regime.recommended_strategies[0]);
+    if (autoStrategy && message?.evaluation?.selected_strategy) {
+      setStrategy(message.evaluation.selected_strategy);
     }
-  }, [autoStrategy, message?.regime]);
+  }, [autoStrategy, message?.evaluation?.selected_strategy]);
+
+  useEffect(() => {
+    if (autoStrategy) setStrategy("");
+  }, [autoStrategy, sym, startDate]);
 
   const isNotRecommended =
     message?.regime &&
@@ -64,8 +77,9 @@ function Backtest() {
         body: JSON.stringify({
           investment: parseFloat(investment),
           sym,
-          stra: strategy,
+          stra: autoStrategy ? "" : strategy,
           startdate: startDate,
+          auto_strategy: autoStrategy,
           fee_pct: parseFloat(feePct),
           slippage_pct: parseFloat(slippagePct),
           max_pos_pct: parseFloat(maxPosPct),
@@ -182,7 +196,7 @@ function Backtest() {
           />
           <span>
             <strong>Auto Strategy</strong>
-            <small>Use market regime recommendation</small>
+            <small>Select first, then test on later data</small>
           </span>
         </label>
         </div>
@@ -203,7 +217,11 @@ function Backtest() {
           <label>Cooldown (bars)</label>
           <input type="number" step="1" value={cooldownBars} onChange={(e) => setCooldownBars(e.target.value)} />
         </div>
-        <button className="run-btn" onClick={runBacktest} disabled={loading || !sym || !startDate}>
+        <button
+          className="run-btn"
+          onClick={runBacktest}
+          disabled={loading || !sym || !startDate || !investment || (!autoStrategy && !strategy)}
+        >
           {loading ? "PROCESSING..." : "RUN ANALYSIS"}
         </button>
         </div>
@@ -250,6 +268,32 @@ function Backtest() {
           )}
           {message.ohlc.length > 0 ? (
             <>
+              {message.evaluation && (
+                <div className={`evaluation-banner ${message.evaluation.mode === "out_of_sample" ? "evaluation-holdout" : ""}`}>
+                  <div>
+                    <span className="evaluation-label">
+                      {message.evaluation.mode === "out_of_sample"
+                        ? "UNSEEN-PERIOD TEST"
+                        : "FULL-PERIOD TEST"}
+                    </span>
+                    <strong>{message.evaluation.selected_strategy}</strong>
+                    <small>{message.evaluation.selection_basis}</small>
+                  </div>
+                  <div className="evaluation-periods">
+                    {message.evaluation.training_period && (
+                      <span>
+                        Strategy Selection Period: {message.evaluation.training_period.start} – {message.evaluation.training_period.end}
+                        {" "}({message.evaluation.training_period.bars} bars)
+                      </span>
+                    )}
+                    <span>
+                      {message.evaluation.mode === "out_of_sample" ? "Testing Period" : "Period"}:
+                      {" "}{message.evaluation.evaluation_period.start} – {message.evaluation.evaluation_period.end}
+                      {" "}({message.evaluation.evaluation_period.bars} bars)
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="metrics-row">
                 {Object.entries(message.summary).map(([key, val]) => (
                   <div key={key} className="metric-box">
