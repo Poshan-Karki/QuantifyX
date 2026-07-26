@@ -68,24 +68,21 @@ function Backtest() {
 
   return (
     <div className="backtest-dashboard">
-      <aside className="dashboard-sidebar">
-        <h3 className="sidebar-title">Strategy Config</h3>
+      <section className="configuration-panel">
+        <div className="section-heading">
+          <div>
+            <span className="section-kicker">BACKTEST WORKSTATION</span>
+            <h3>Strategy Configuration</h3>
+          </div>
+          <span className="section-hint">Configure execution parameters, then run your analysis.</span>
+        </div>
+        <div className="config-grid config-grid-primary">
         <div className="control-group">
           <label>Asset</label>
           <select value={sym} onChange={(e) => setSym(e.target.value)}>
             <option value="">Select Ticker</option>
             {symbolList.map((item, i) => <option key={i} value={item.Symbol}>{item.Symbol}</option>)}
           </select>
-        </div>
-        <div className="control-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={autoStrategy}
-              onChange={(e) => setAutoStrategy(e.target.checked)}
-            />
-            {" "}Auto-select strategy from market regime
-          </label>
         </div>
         <div className="control-group">
           <label>Algorithm</label>
@@ -101,11 +98,6 @@ function Backtest() {
             <option value="ATR Breakout">ATR Breakout</option>
           </select>
         </div>
-        {!autoStrategy && isNotRecommended && (
-          <div className="warning-banner">
-            Selected strategy is not recommended. Consider: {message?.regime?.recommended_strategies?.join(", ")}
-          </div>
-        )}
         <div className="control-group">
           <label>Start Date</label>
           <input
@@ -119,6 +111,19 @@ function Backtest() {
           <label>Capital</label>
           <input type="number" value={investment} onChange={(e) => setInve(e.target.value)} placeholder="10000" />
         </div>
+        <label className="auto-strategy-toggle">
+          <input
+            type="checkbox"
+            checked={autoStrategy}
+            onChange={(e) => setAutoStrategy(e.target.checked)}
+          />
+          <span>
+            <strong>Auto Strategy</strong>
+            <small>Use market regime recommendation</small>
+          </span>
+        </label>
+        </div>
+        <div className="config-grid config-grid-secondary">
         <div className="control-group">
           <label>Fee (%)</label>
           <input type="number" step="0.01" value={feePct} onChange={(e) => setFeePct(e.target.value)} />
@@ -135,10 +140,16 @@ function Backtest() {
           <label>Cooldown (bars)</label>
           <input type="number" step="1" value={cooldownBars} onChange={(e) => setCooldownBars(e.target.value)} />
         </div>
-        <button className="run-btn" onClick={runBacktest} disabled={loading}>
+        <button className="run-btn" onClick={runBacktest} disabled={loading || !sym || !startDate}>
           {loading ? "PROCESSING..." : "RUN ANALYSIS"}
         </button>
-        
+        </div>
+        {!autoStrategy && isNotRecommended && (
+          <div className="warning-banner">
+            Selected strategy is not recommended. Consider: {message?.regime?.recommended_strategies?.join(", ")}
+          </div>
+        )}
+
         <MarketRegime
           sym={sym}
           startdate={startDate}
@@ -149,10 +160,10 @@ function Backtest() {
           onAutoStrategyChange={setAutoStrategy}
           onRegimeDetected={(data) => setMessage(prev => ({ ...prev, regime: data }))}
         />
-      </aside>
+      </section>
 
       <main className="dashboard-main">
-        <div className="scroll-content">
+        <div className="results-content">
           {loading && (
             <div style={{ display: "flex", gap: "12px", marginBottom: "1rem" }}>
               {[...Array(4)].map((_, i) => (
@@ -176,28 +187,6 @@ function Backtest() {
           )}
           {message.ohlc.length > 0 ? (
             <>
-              {message.verdict && (
-                <div style={{
-                  background: message.verdict.action === "BUY" ? "rgba(34,197,94,0.15)"
-                    : message.verdict.action === "AVOID" ? "rgba(239,68,68,0.15)"
-                      : "rgba(234,179,8,0.15)",
-                  border: `1px solid ${
-                    message.verdict.action === "BUY" ? "#22c55e"
-                      : message.verdict.action === "AVOID" ? "#ef4444"
-                        : "#eab308"
-                  }`,
-                  borderRadius: "8px",
-                  padding: "14px 16px",
-                  marginBottom: "1rem"
-                }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "4px" }}>
-                    {message.verdict.action}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: 1.5 }}>
-                    {message.verdict.message}
-                  </div>
-                </div>
-              )}
               <div className="metrics-row">
                 {Object.entries(message.summary).map(([key, val]) => (
                   <div key={key} className="metric-box">
@@ -206,6 +195,25 @@ function Backtest() {
                   </div>
                 ))}
               </div>
+              {message.verdict && (
+                <div className="verdict-card" style={{
+                  background: message.verdict.action === "BUY" ? "rgba(34,197,94,0.15)"
+                    : message.verdict.action === "AVOID" ? "rgba(239,68,68,0.15)"
+                      : "rgba(234,179,8,0.15)",
+                  border: `1px solid ${
+                    message.verdict.action === "BUY" ? "#22c55e"
+                      : message.verdict.action === "AVOID" ? "#ef4444"
+                        : "#eab308"
+                  }`,
+                  borderRadius: "8px"
+                }}>
+                  <div className="verdict-label">STRATEGY VERDICT</div>
+                  <div className="verdict-content">
+                    <div className="verdict-action">{message.verdict.action}</div>
+                    <div className="verdict-message">{message.verdict.message}</div>
+                  </div>
+                </div>
+              )}
               <div className="chart-container">
                 <Chart data={{
                   ohlc: message.ohlc,

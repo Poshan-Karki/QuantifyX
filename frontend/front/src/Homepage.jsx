@@ -13,7 +13,7 @@ const Homepage = () => {
           <p className="sub-title">QUANTITATIVE RESEARCH & STRATEGY VALIDATION</p>
           <h1>Institutional-grade backtesting for the next generation of alpha.</h1>
           <p className="hero-description">
-            QuantifyX provides the high-performance infrastructure required to transform 
+            NEPSEIntel provides the high-performance infrastructure required to transform 
             raw market data into validated, executable strategies. No bias. No latency. 
             Pure mathematical rigor.
           </p>

@@ -9,7 +9,7 @@ const REGIME_COLORS = {
   "Ranging/Sideways": { bg: "rgba(148,163,184,0.15)",border: "#94a3b8", text: "#cbd5e1" },
 };
 
-export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, autoStrategy, onAutoStrategyChange, onRegimeDetected }) {
+export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, onRegimeDetected }) {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
@@ -41,31 +41,16 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
   const colors = regime ? (REGIME_COLORS[regime.regime] || REGIME_COLORS["Ranging/Sideways"]) : null;
 
   return (
-    <div style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.5rem" }}>
-      <h4 style={{ color: "#94a3b8", fontSize: "0.7rem", letterSpacing: "0.12em", marginBottom: "0.75rem" }}>
+    <div className="regime-panel">
+      <h4 className="regime-title">
         MARKET REGIME
       </h4>
 
       <button
+        className="regime-analyze-btn"
         onClick={analyze}
         disabled={loading || !sym || !startdate}
-        style={{
-          width: "100%", padding: "8px", fontSize: "0.72rem", letterSpacing: "0.08em",
-          background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.5)",
-          color: "#a5b4fc", borderRadius: "6px", cursor: "pointer", marginBottom: "1rem"
-        }}
       >
-        <div style={{ marginBottom: "0.75rem", fontSize: "0.7rem", color: "#94a3b8" }}>
-  <label>
-    <input
-      type="checkbox"
-      checked={autoStrategy}
-      onChange={(e) => onAutoStrategyChange?.(e.target.checked)}
-      style={{ marginRight: "6px" }}
-    />
-    Auto-select regime strategy
-  </label>
-</div>
         {loading ? "ANALYSING..." : "DETECT REGIME"}
       </button>
 
@@ -74,11 +59,11 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
       )}
 
       {regime && (
-        <>
+        <div className="regime-content">
           {/* Regime badge */}
-          <div style={{
+          <div className="regime-summary" style={{
             background: colors.bg, border: `1px solid ${colors.border}`,
-            borderRadius: "8px", padding: "12px 14px", marginBottom: "1rem"
+            borderRadius: "8px"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: colors.text, fontWeight: 700, fontSize: "0.85rem" }}>
@@ -97,7 +82,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
           </div>
 
           {/* Indicator pills */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "1rem" }}>
+          <div className="indicator-pills">
             {[
               ["ADX", regime.indicators.adx],
               ["RSI", regime.indicators.rsi],
@@ -114,12 +99,14 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
           </div>
 
           {/* Strategy recommendations */}
-          <div>
+          <div className="strategy-recommendations">
             <div style={{ color: "#64748b", fontSize: "0.65rem", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>
               RECOMMENDED STRATEGIES
             </div>
+            <div className="strategy-pills">
             {regime.recommended_strategies.map((s) => (
               <div
+                className="strategy-pill"
                 key={s}
                 onClick={() => onStrategyPick(s)}
                 style={{
@@ -139,8 +126,9 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
                 </div>
               </div>
             ))}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

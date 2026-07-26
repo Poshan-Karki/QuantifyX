@@ -7,7 +7,7 @@ function Navbar() {
   return (
     <nav className="firm-nav">
       <div className="nav-left">
-        <Link to="/" className="firm-logo">QUANTIFYX<span>.</span></Link>
+        <Link to="/" className="firm-logo">NEPSEIntel<span>.</span></Link>
         <div className="status-indicator"><span className="dot"></span> LIVE_FEED</div>
       </div>
       <ul className="nav-links">
