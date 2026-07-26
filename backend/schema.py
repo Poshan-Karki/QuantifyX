@@ -21,11 +21,8 @@ class BacktestRequest(BaseModel):
     sym: str
     stra: str
     startdate: datetime
-    investment: float
-    sym: str
-    stra: str
+    auto_strategy: bool = False
     fee_pct: float = 0.2
     slippage_pct: float = 0.1
     max_pos_pct: float = 20.0
     cooldown_bars: int = 3
-    

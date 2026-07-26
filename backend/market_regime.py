@@ -36,6 +36,11 @@ REGIME_STRATEGY_MAP = {
         "Bollinger Band",
         "Bollinger+Rsi"
     ],
+    "Low Volatility": [
+        "Mean Reversion",
+        "Bollinger+Rsi",
+        "RSI Mean Reversion"
+    ],
     "Ranging/Sideways": [
         "Mean Reversion",
         "Bollinger+Rsi",

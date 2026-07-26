@@ -15,6 +15,7 @@ from schema import BacktestRequest
 from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout, MACDCross, RSIMeanReversion, ATRBreakout
 from market_regime import detect_regime
 from verdict import generate_verdict
+from analysis_split import chronological_holdout, period_details
 
 
 
@@ -112,11 +113,6 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     df[['Open', 'High', 'Low', 'Close', 'Volume']] = \
     df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
     
-    try:
-        regime_data = detect_regime(df)
-    except Exception:
-        regime_data = None
-
     strategies = {
         "Bollinger Band": bollinger_band,
         "Moving Average Crossover": macrossover,
@@ -127,15 +123,63 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
         "RSI Mean Reversion": RSIMeanReversion,
         "ATR Breakout": ATRBreakout
     }
-    
-    strategy_select = strategies.get(data.stra)
+
+    try:
+        current_regime = detect_regime(df)
+    except Exception:
+        current_regime = None
+
+    strategy_name = data.stra
+    backtest_df = df
+    selection_regime = None
+    evaluation = {
+        "mode": "full_period",
+        "selected_strategy": strategy_name,
+        "selection_basis": "User-selected strategy",
+        "evaluation_period": period_details(df),
+    }
+
+    if data.auto_strategy:
+        try:
+            training_df, backtest_df = chronological_holdout(df)
+            selection_regime = detect_regime(training_df)
+        except ValueError as exc:
+            return {"status": "fail", "message": str(exc)}
+        except Exception:
+            return {
+                "status": "fail",
+                "message": (
+                    "The strategy selection period could not produce a reliable market regime. "
+                    "Choose an earlier start date or turn off Auto Strategy."
+                ),
+            }
+
+        recommended = selection_regime.get("recommended_strategies", [])
+        if not recommended:
+            return {
+                "status": "fail",
+                "message": "No strategy recommendation was available for the training period.",
+            }
+
+        strategy_name = recommended[0]
+        evaluation = {
+            "mode": "out_of_sample",
+            "selected_strategy": strategy_name,
+            "selection_basis": (
+                f"Selected from the earlier '{selection_regime['regime']}' market regime"
+            ),
+            "training_period": period_details(training_df),
+            "evaluation_period": period_details(backtest_df),
+        }
+
+    strategy_select = strategies.get(strategy_name)
     if not strategy_select:
         return {"status": "fail", "message": "Invalid strategy selected"}
 
     apply_trade_params(strategy_select, data)
 
     bt = Backtest(
-    df,
+    backtest_df,
     strategy_select,
     cash=data.investment,
     commission=data.fee_pct / 100,
@@ -155,7 +199,7 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
              trades_list = df_trades.to_dict(orient='records')
     
     ohlc_data = []
-    for index, row in df.iterrows():
+    for index, row in backtest_df.iterrows():
         ohlc_data.append({
             "time": index.strftime('%Y-%m-%d'),
             "open": row['Open'],
@@ -177,47 +221,49 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
             "Sharpe Ratio": float(stats['Sharpe Ratio']),
         },
         "ohlc": ohlc_data,
-        "trades": trades_list 
+        "trades": trades_list,
+        "evaluation": evaluation,
     }
-    raw_response["verdict"] = generate_verdict(stats, data.stra, regime_data)
-    raw_response["regime"] = regime_data 
+    raw_response["verdict"] = generate_verdict(stats, strategy_name, current_regime)
+    raw_response["regime"] = current_regime
+    raw_response["selection_regime"] = selection_regime
 
 
-    if data.stra == "Bollinger Band":
+    if strategy_name == "Bollinger Band":
         raw_response["indicators"] = {
             "upper": stats['_strategy'].bb_upper.tolist(),
             "middle": stats['_strategy'].middle.tolist(),
             "lower": stats['_strategy'].lower.tolist()
         }
-    elif data.stra == "Moving Average Crossover":
+    elif strategy_name == "Moving Average Crossover":
         raw_response["indicators"] = {
             "fast_ma": stats['_strategy'].fast.tolist(),
             "slow_ma": stats['_strategy'].slow.tolist()
         }
-    elif data.stra == "Mean Reversion":
+    elif strategy_name == "Mean Reversion":
         raw_response["indicators"] = {
             "zscore": stats['_strategy'].zscore.tolist()
         }
-    elif data.stra == "Bollinger+Rsi":
+    elif strategy_name == "Bollinger+Rsi":
         raw_response["indicators"] = {
             "upper": stats['_strategy'].bband_upper.tolist(),
             "middle": stats['_strategy'].bband_middle.tolist(),
             "lower": stats['_strategy'].lower.tolist()
         }
-    elif data.stra == "VolumeBreakout":
+    elif strategy_name == "VolumeBreakout":
         raw_response["indicators"] = {
             "average_vol":stats["_strategy"].avg_vol.tolist()
         }
-    elif data.stra == "MACD Cross":
+    elif strategy_name == "MACD Cross":
         raw_response["indicators"] = {
             "macd": stats['_strategy'].macd.tolist(),
             "signal": stats['_strategy'].signal_line.tolist()
         }
-    elif data.stra == "RSI Mean Reversion":
+    elif strategy_name == "RSI Mean Reversion":
         raw_response["indicators"] = {
             "rsi": stats['_strategy'].rsi.tolist()
         }
-    elif data.stra == "ATR Breakout":
+    elif strategy_name == "ATR Breakout":
         raw_response["indicators"] = {
         "atr": stats["_strategy"].atr.tolist(),
         "ema": stats["_strategy"].ema.tolist(),
