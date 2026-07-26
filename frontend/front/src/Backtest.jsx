@@ -7,6 +7,7 @@ function Backtest() {
   const [message, setMessage] = useState({ summary: {}, ohlc: [], trades: [], indicators: {}, verdict: null, regime: null });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
+  const [symbolSearch, setSymbolSearch] = useState("");
   const [strategy, setStrategy] = useState("");
   const [investment, setInve] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,26 @@ function Backtest() {
   const isNotRecommended =
     message?.regime &&
     !message.regime.recommended_strategies?.includes(strategy);
+
+  const normalizedSymbolSearch = symbolSearch.trim().toLowerCase();
+  const filteredSymbolList = symbolList.filter((item) =>
+    String(item.Symbol).toLowerCase().includes(normalizedSymbolSearch)
+  );
+
+  const handleSymbolSearch = (value) => {
+    setSymbolSearch(value);
+    const exactMatch = symbolList.find(
+      (item) => String(item.Symbol).toLowerCase() === value.trim().toLowerCase()
+    );
+    if (exactMatch) setSym(exactMatch.Symbol);
+  };
+
+  const selectFirstSearchResult = () => {
+    if (filteredSymbolList.length > 0) {
+      setSym(filteredSymbolList[0].Symbol);
+      setSymbolSearch(filteredSymbolList[0].Symbol);
+    }
+  };
 
   const runBacktest = async () => {
     setLoading(true);
@@ -77,11 +98,53 @@ function Backtest() {
           <span className="section-hint">Configure execution parameters, then run your analysis.</span>
         </div>
         <div className="config-grid config-grid-primary">
-        <div className="control-group">
+        <div className="control-group asset-control">
           <label>Asset</label>
-          <select value={sym} onChange={(e) => setSym(e.target.value)}>
-            <option value="">Select Ticker</option>
-            {symbolList.map((item, i) => <option key={i} value={item.Symbol}>{item.Symbol}</option>)}
+          <div className="asset-search">
+            <span className="asset-search-icon" aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              value={symbolSearch}
+              onChange={(e) => handleSymbolSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  selectFirstSearchResult();
+                }
+              }}
+              placeholder="Search stock symbol"
+              aria-label="Search stock symbols"
+              list="stock-symbol-suggestions"
+            />
+            <datalist id="stock-symbol-suggestions">
+              {filteredSymbolList.slice(0, 12).map((item) => (
+                <option key={item.Symbol} value={item.Symbol} />
+              ))}
+            </datalist>
+            {symbolSearch && (
+              <button
+                type="button"
+                className="asset-search-clear"
+                onClick={() => setSymbolSearch("")}
+                aria-label="Clear stock search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <select
+            value={sym}
+            onChange={(e) => {
+              setSym(e.target.value);
+              if (e.target.value) setSymbolSearch(e.target.value);
+            }}
+          >
+            <option value="">
+              {filteredSymbolList.length ? "Select Ticker" : "No matching symbols"}
+            </option>
+            {filteredSymbolList.map((item) => (
+              <option key={item.Symbol} value={item.Symbol}>{item.Symbol}</option>
+            ))}
           </select>
         </div>
         <div className="control-group">

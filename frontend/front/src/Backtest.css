@@ -92,6 +92,64 @@
   border-color: #6366f1;
 }
 
+.asset-control {
+  position: relative;
+}
+
+.asset-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.asset-search input {
+  height: 38px;
+  padding: 0 34px;
+  border-bottom-color: #1a1a1a;
+  border-radius: 6px 6px 0 0;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.asset-control select {
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.asset-search:focus-within + select {
+  border-color: #6366f1;
+  border-top: 0;
+}
+
+.asset-search-icon {
+  position: absolute;
+  left: 12px;
+  z-index: 1;
+  color: #6366f1;
+  font: 18px/1 monospace;
+  pointer-events: none;
+}
+
+.asset-search-clear {
+  position: absolute;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #777;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.asset-search-clear:hover {
+  color: white;
+  background: #222;
+}
+
 .auto-strategy-toggle {
   display: flex;
   align-items: center;
