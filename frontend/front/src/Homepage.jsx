@@ -15,7 +15,7 @@ const Homepage = () => {
           <p className="hero-description">
             NEPSEIntel provides the high-performance infrastructure required to transform 
             raw market data into validated, executable strategies. No bias. No latency. 
-            Pure mathematical rigor.
+            Pure mathematical rigor with some consideration of external factors.
           </p>
           <div className="action-area">
             <button className="btn-firm" onClick={() => navigate('/Backtest')}>

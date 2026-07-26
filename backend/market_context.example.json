@@ -1,0 +1,38 @@
+[
+  {
+    "id": "market-policy-example",
+    "scope": "MARKET",
+    "symbol": null,
+    "headline": "Example market-wide policy notice",
+    "message": "Replace this draft with a concise, developer-reviewed explanation of the policy or political development and its likely relevance to NEPSE.",
+    "stance": "NEGATIVE",
+    "impact": "HIGH",
+    "priority": 100,
+    "verdict_label": "FAVORABLE WITH CAUTION",
+    "verdict_message": "The technical result remains visible, but the developer team considers current market-wide uncertainty important enough to reduce confidence.",
+    "source_label": "Official source",
+    "source_url": "https://example.com/replace-with-official-source",
+    "published_at": "2026-07-27",
+    "expires_at": "2026-08-10",
+    "reviewed_by": "QuantifyX Research Team",
+    "status": "DRAFT"
+  },
+  {
+    "id": "symbol-notice-example",
+    "scope": "SYMBOL",
+    "symbol": "NTC",
+    "headline": "Example NTC-specific notice",
+    "message": "Replace this draft with the reviewed company notice and explain why it is relevant to NTC.",
+    "stance": "POSITIVE",
+    "impact": "MEDIUM",
+    "priority": 50,
+    "verdict_label": "WATCH FOR CONFIRMATION",
+    "verdict_message": "The company-specific development is constructive, but it should be considered alongside the strength and sample size of the technical result.",
+    "source_label": "Official company notice",
+    "source_url": "https://example.com/replace-with-official-source",
+    "published_at": "2026-07-27",
+    "expires_at": "2026-08-10",
+    "reviewed_by": "QuantifyX Research Team",
+    "status": "DRAFT"
+  }
+]

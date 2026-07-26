@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Chart from "./Chart";
 import "./Backtest.css";
 import MarketRegime from "./MarketRegime";
+import MarketContext from "./MarketContext";
 
 function Backtest() {
   const [message, setMessage] = useState({
@@ -13,6 +14,8 @@ function Backtest() {
     regime: null,
     selection_regime: null,
     evaluation: null,
+    market_context: null,
+    contextual_verdict: null,
   });
   const [sym, setSym] = useState("");
   const [symbolList, setList] = useState([]);
@@ -321,6 +324,10 @@ function Backtest() {
                   </div>
                 </div>
               )}
+              <MarketContext
+                context={message.market_context}
+                contextualVerdict={message.contextual_verdict}
+              />
               <div className="chart-container">
                 <Chart data={{
                   ohlc: message.ohlc,

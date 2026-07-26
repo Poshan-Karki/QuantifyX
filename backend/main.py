@@ -16,6 +16,7 @@ from Backtest import macrossover,MeanReversion,BollingerRsi,VolumeBreakout, MACD
 from market_regime import detect_regime
 from verdict import generate_verdict
 from analysis_split import chronological_holdout, period_details
+from market_context import build_contextual_verdict, resolve_market_context
 
 
 
@@ -227,6 +228,11 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     raw_response["verdict"] = generate_verdict(stats, strategy_name, current_regime)
     raw_response["regime"] = current_regime
     raw_response["selection_regime"] = selection_regime
+    raw_response["market_context"] = resolve_market_context(symbol1)
+    raw_response["contextual_verdict"] = build_contextual_verdict(
+        raw_response["verdict"],
+        raw_response["market_context"]["items"],
+    )
 
 
     if strategy_name == "Bollinger Band":
