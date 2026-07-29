@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
@@ -17,12 +17,12 @@ class Data(BaseModel):
     Return:float
     
 class BacktestRequest(BaseModel):
-    investment: float
+    investment: float = Field(gt=0, description="Starting capital, must be greater than 0")
     sym: str
     stra: str
     startdate: datetime
     auto_strategy: bool = False
-    fee_pct: float = 0.2
-    slippage_pct: float = 0.1
-    max_pos_pct: float = 20.0
-    cooldown_bars: int = 3
+    fee_pct: float = Field(default=0.2, ge=0, le=100)
+    slippage_pct: float = Field(default=0.1, ge=0, le=100)
+    max_pos_pct: float = Field(default=20.0, gt=0, le=100)
+    cooldown_bars: int = Field(default=3, ge=0)

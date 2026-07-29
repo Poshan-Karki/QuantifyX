@@ -25,4 +25,9 @@ def generate_verdict(stats, strategy_name, regime_data=None):
         message += (f" Note: the current market regime is '{regime_data['regime']}', "
                      f"which typically favors {alt} instead — consider comparing results.")
 
+    if 0 < n_trades < 10:
+        message += (f" Caution: this verdict is based on only {n_trades} trade"
+                     f"{'s' if n_trades != 1 else ''} — treat it as a small-sample signal, "
+                     f"not a statistically robust conclusion.")
+
     return {"action": action, "message": message}
