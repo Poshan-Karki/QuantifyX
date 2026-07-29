@@ -6,10 +6,15 @@ from sqlalchemy.pool import NullPool
 
 load_dotenv()
 datbase_url=os.getenv('DATABASE_URL')
+if not datbase_url:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Copy backend/.env.example to backend/.env "
+        "for local development, or set it in your host's environment."
+    )
 engine=create_engine(
     datbase_url,
     poolclass=NullPool
-    
+
 )
 Sessionlocal=sessionmaker(
     bind=engine,

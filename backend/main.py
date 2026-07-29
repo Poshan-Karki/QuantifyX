@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI,Depends
 from db import Sessionlocal
 from schema import Symbol
@@ -17,6 +18,8 @@ from market_regime import detect_regime
 from verdict import generate_verdict
 from analysis_split import chronological_holdout, period_details
 from market_context import build_contextual_verdict, resolve_market_context
+from sklearn.preprocessing import StandardScaler
+from hmmlearn.hmm import GaussianHMM
 
 
 
@@ -24,9 +27,22 @@ from market_context import build_contextual_verdict, resolve_market_context
 
 app=FastAPI()
 
-origins = [
+DEFAULT_DEV_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+]
+
+# In production set ALLOWED_ORIGINS to the deployed frontend origin(s),
+# comma separated e.g. "https://quantifyx.vercel.app". Wildcards are not
+# usable here because credentials are allowed.
+origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", ",".join(DEFAULT_DEV_ORIGINS)).split(",")
+    if origin.strip()
 ]
 
 app.add_middleware(
@@ -50,6 +66,22 @@ def root():
     return {"message": "API is running"}
 
 
+@app.get('/data-status')
+def data_status(db: Session = Depends(get_db)):
+    query = text(
+        'SELECT MIN("Date") AS earliest, MAX("Date") AS latest, '
+        'COUNT(DISTINCT "Symbol") AS symbol_count FROM nepseintel'
+    )
+    row = db.execute(query).fetchone()
+    if not row or row.latest is None:
+        return {"status": "fail", "message": "No data found"}
+
+    return {
+        "earliest_date": str(row.earliest.date() if hasattr(row.earliest, "date") else row.earliest),
+        "latest_date": str(row.latest.date() if hasattr(row.latest, "date") else row.latest),
+        "symbol_count": row.symbol_count,
+    }
+
 
 @app.get('/hydroname')
 def get_hydro_name(db:Session=Depends(get_db)):
@@ -65,7 +97,7 @@ def get_hydro_name(db:Session=Depends(get_db)):
 @app.post("/gethydro")
 def get_hydro_data(sym:str,db:Session=Depends(get_db)):
     symbol=sym.upper()
-    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM nepseintel WHERE "Symbol" = :symbol ORDER BY "date"')
+    query=text('SELECT "Symbol","Open","High","Low","Close","Vol","Date" FROM nepseintel WHERE "Symbol" = :symbol ORDER BY "Date"')
     result=db.execute(query,{"symbol":symbol}).fetchall()
     if  not result:
        return {"status": "fail", "message": "No data found"}
@@ -95,7 +127,7 @@ def apply_trade_params(strategy_cls, req):
     
 
 @app.post("/bbband")
-def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
+def run_backtest(data: BacktestRequest, db: Session = Depends(get_db)):
     symbol1 = data.sym.upper()
     
 
@@ -189,16 +221,11 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     stats = bt.run()
     trades_list = []
     if '_trades' in stats and not stats['_trades'].empty:
-    
-             df_trades = stats['_trades'].copy()
-    
+        df_trades = stats['_trades'].copy()
+        df_trades['EntryTime'] = df_trades['EntryTime'].dt.strftime('%Y-%m-%d')
+        df_trades['ExitTime'] = df_trades['ExitTime'].dt.strftime('%Y-%m-%d')
+        trades_list = df_trades.to_dict(orient='records')
 
-             df_trades['EntryTime'] = df_trades['EntryTime'].dt.strftime('%Y-%m-%d')
-             df_trades['ExitTime'] = df_trades['ExitTime'].dt.strftime('%Y-%m-%d')
-    
-    
-             trades_list = df_trades.to_dict(orient='records')
-    
     ohlc_data = []
     for index, row in backtest_df.iterrows():
         ohlc_data.append({
@@ -279,21 +306,6 @@ def test_bollinger(data: BacktestRequest, db: Session = Depends(get_db)):
     return jsonable_encoder(deep_sanitize(raw_response))
 
 
-@app.post('/chat')
-def chat(data:  Symbol,cash2:float,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Low","Close","Vol","Date" FROM nepseintel where "Symbol" =:symbol ORDER BY "date"')
-    result=db.execute(query,{"symbol":data.sym})
-    
-    if not result:
-        return {"status": "fail", "message": "No data found for symbol"}
-
-    df = pd.DataFrame(result, columns=[ 'Open', 'High', 'Low', 'Close', 'Volume',"Date"])
-    initial_input={
-        "ticker":data.syk,
-        "raw_data":df.to_dict(orient='records'),
-        "cash":cash2
-    }
-    
 @app.post("/regime")
 def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
     symbol = data.sym.upper()
@@ -318,9 +330,7 @@ def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
 @app.post('/hmm')
 async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
     query=text('SELECT "Open","High","Close","Low","Vol","Date" FROM nepseintel WHERE "Symbol"=:symbol ORDER BY "Date"')
-    print(query.text)
     result=db.execute(query,{"symbol":symbol.syk.upper()}).fetchall()
-    print(result)
     if not result:
         return {"status":"fail no data"}
     df=pd.DataFrame(result,columns=['Open','High','Close','Low','Vol','Date'])

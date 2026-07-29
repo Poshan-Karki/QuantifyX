@@ -31,11 +31,6 @@ def mean_reversion(close, window=20):
     return z.values
 
 
-def volume(volume,window=30):
-    volume=pd.Series(volume)
-    average_vol=volume.rolling(window).mean()
-    return average_vol
-    
 def ema(close, window=50):
     close = pd.Series(close)
     return EMAIndicator(close=close, window=window).ema_indicator().values
@@ -183,13 +178,13 @@ class VolumeBreakout(BaseStrategy):
         price = self.data.Close[-1]
 
         
-        if price<=self.bband_lower[-1] and  current_vol > (self.exit_multiplier * avg_vol_now):
+        if price<=self.bband_lower[-1] and  current_vol > (self.entry_multiplier * avg_vol_now):
             if not self.position:
-                stop_loss = price * 0.90      # Stop loss will be 10% below entry price 
+                stop_loss = price * 0.90      # Stop loss will be 10% below entry price
                 self._enter_long(sl=stop_loss)
-                
-        
-        elif self.position and price>=self.bband_middle[-1] and current_vol < (self.entry_multiplier * avg_vol_now):
+
+
+        elif self.position and price>=self.bband_middle[-1] and current_vol < (self.exit_multiplier * avg_vol_now):
             self.position.close()
 
 class MACDCross(BaseStrategy):

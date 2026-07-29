@@ -60,14 +60,114 @@
 
 ## 💻 Getting Started
 
-### 📦 Installation
+### 📦 Local Development
+
+QuantifyX is two services: a FastAPI backend and a Vite/React frontend. Both
+must be running.
 
 ```bash
 # Clone the repository
-git clone [https://github.com/Poshan-Karki/QuantifyX.git](https://github.com/Poshan-Karki/QuantifyX.git)
+git clone https://github.com/Poshan-Karki/QuantifyX.git
+cd QuantifyX
+```
 
-# Navigate to the project directory
-cd quantifyx
+**1. Backend** (needs Python 3.11 and a PostgreSQL instance):
 
-# Install dependencies and start development server
-npm install && npm run dev
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
+
+pip install -r requirements-dev.txt
+
+cp .env.example .env           # then fill in DATABASE_URL
+uvicorn main:app --reload      # serves on http://localhost:8000
+```
+
+**2. Frontend** (needs Node 20+), in a second terminal:
+
+```bash
+cd frontend/front
+npm install
+npm run dev                    # serves on http://localhost:5173
+```
+
+The frontend defaults to `http://localhost:8000` for the API, so no
+configuration is needed for local work.
+
+### 🧪 Tests
+
+```bash
+cd backend
+python -m pytest               # 37 tests
+```
+
+---
+
+## 🚢 Deployment
+
+### Environment variables
+
+| Service | Variable | Required | Purpose |
+| :--- | :--- | :--- | :--- |
+| Backend | `DATABASE_URL` | **Yes** | Postgres connection string. The app refuses to start without it. |
+| Backend | `ALLOWED_ORIGINS` | **Yes** in prod | Comma-separated frontend origins for CORS. `*` will not work, because the API sends credentials. |
+| Backend | `groq_api_key` | No | Reserved for the unreleased AI advisor. |
+| Frontend | `VITE_API_URL` | **Yes** in prod | Public URL of the backend, no trailing slash. |
+
+> [!IMPORTANT]
+> `VITE_API_URL` is inlined by Vite at **build time**, not read at runtime.
+> It must be set on whichever host runs `npm run build`; changing it later
+> requires a rebuild, not a restart.
+
+The two services deploy separately. **Deploy the backend first** — the frontend
+build needs its public URL.
+
+### 1. Backend
+
+Any host that runs Python 3.11 and an ASGI server.
+
+| Setting | Value |
+| :--- | :--- |
+| Root directory | `backend` |
+| Build command | `pip install -r requirement.txt` |
+| Start command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+
+Set `DATABASE_URL` and `ALLOWED_ORIGINS` in the host's environment. Most hosts
+inject `$PORT`; if yours does not, substitute a fixed port.
+
+> [!NOTE]
+> The dependency set is large (~340 MB unzipped, mostly `scipy`, `pandas` and
+> `scikit-learn`). This rules out size-limited serverless platforms such as
+> Vercel's Python runtime, and needs a host with enough memory to import the
+> scientific stack at startup.
+
+### 2. Frontend
+
+Static build, deployable to any static host or CDN.
+
+| Setting | Value |
+| :--- | :--- |
+| Root directory | `frontend/front` |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+
+Set `VITE_API_URL` to the backend URL from step 1, then deploy.
+
+Because the app uses client-side routing, the host must rewrite unknown paths
+to `index.html`, or visiting `/Backtest` directly will 404.
+`frontend/front/vercel.json` configures this for Vercel; other hosts have an
+equivalent SPA-fallback or rewrite setting.
+
+### 3. Close the CORS loop
+
+Set the backend's `ALLOWED_ORIGINS` to the deployed frontend origin and
+redeploy the backend.
+
+> [!TIP]
+> Preview/branch deployments usually get their own generated URLs, which will
+> fail CORS against an exact-match `ALLOWED_ORIGINS` list. Add those origins
+> explicitly if you need previews to reach the API.
+
+

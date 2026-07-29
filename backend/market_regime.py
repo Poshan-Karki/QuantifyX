@@ -5,17 +5,6 @@ from ta.volatility import AverageTrueRange, BollingerBands
 from ta.momentum import RSIIndicator
 
 
-STRATEGY_DESCRIPTIONS = {
-    "Moving Average Crossover": "Long when fast MA crosses above slow MA. Works well in clear up/down trends.",
-    "Mean Reversion": "Buy oversold deviations from a moving average (e.g. z-score). Suited to range-bound markets.",
-    "Bollinger Band": "Buy at lower Bollinger band and exit at midline. Best in volatile but oscillating markets.",
-    "Bollinger+Rsi": "Long when price < lower band AND RSI oversold; exit on rebound. Higher-quality mean-reversion filter in volatile ranges.",
-    "VolumeBreakout": "Long on volume-confirmed price breakouts. Works best in trending markets with volume surges.",
-    "MACD Cross": "Buy/sell on MACD line crossing signal line. Especially useful in trending markets.",
-    "RSI Mean Reversion": "Buy oversold RSI (short lookback e.g. 2-5) and exit at moderate RSI. Performs well on stocks in sideways regimes.",
-    "ATR Breakout": "Long on price breakouts confirmed by rising ATR (14). Targets strong trending moves with high volatility."
-}
-
 REGIME_STRATEGY_MAP = {
     "Trending Up": [
         "Moving Average Crossover",
