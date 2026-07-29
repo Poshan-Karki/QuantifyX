@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { apiUrl } from "./api";
 
 const REGIME_COLORS = {
   "Trending Up":      { bg: "rgba(34,197,94,0.15)", border: "#22c55e", text: "#86efac" },
@@ -22,7 +23,7 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:8000/regime", {
+      const res = await fetch(apiUrl("/regime"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sym, startdate, investment: parseFloat(investment) || 10000, stra: "Bollinger Band" }),

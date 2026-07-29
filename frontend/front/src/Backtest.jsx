@@ -3,6 +3,7 @@ import Chart from "./Chart";
 import "./Backtest.css";
 import MarketRegime from "./MarketRegime";
 import MarketContext from "./MarketContext";
+import { apiUrl } from "./api";
 
 function Backtest() {
   const [message, setMessage] = useState({
@@ -32,7 +33,7 @@ function Backtest() {
   const [cooldownBars, setCooldownBars] = useState("0");
 
   useEffect(() => {
-    fetch("http://localhost:8000/hydroname").then(res => res.json()).then(data => setList(data));
+    fetch(apiUrl("/hydroname")).then(res => res.json()).then(data => setList(data));
   }, []);
 
   useEffect(() => {
@@ -74,7 +75,7 @@ function Backtest() {
     setError("");
     await new Promise(r => setTimeout(r, 0));
     try {
-      const res = await fetch("http://localhost:8000/bbband", {
+      const res = await fetch(apiUrl("/bbband"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -89,7 +90,16 @@ function Backtest() {
           cooldown_bars: parseInt(cooldownBars, 10),
         }),
       });
-      if (!res.ok) throw new Error("Server returned an error");
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        // FastAPI returns 422 validation errors as a list of {loc, msg} objects.
+        const validationMessage = Array.isArray(detail?.detail)
+          ? detail.detail
+              .map((d) => `${d.loc?.[d.loc.length - 1] ?? "input"}: ${d.msg}`)
+              .join("; ")
+          : detail?.detail;
+        throw new Error(validationMessage || "Server returned an error");
+      }
       const data = await res.json();
       if (data.status === "fail") {
         throw new Error(data.message);
@@ -322,6 +332,9 @@ function Backtest() {
                     <div className="verdict-action">{message.verdict.action}</div>
                     <div className="verdict-message">{message.verdict.message}</div>
                   </div>
+                  <div className="verdict-disclosure">
+                    Based on this strategy's backtested performance over the tested period — not a live buy/sell signal for today's price.
+                  </div>
                 </div>
               )}
               <MarketContext
@@ -337,13 +350,15 @@ function Backtest() {
               </div>
               <div className="table-container">
                 <table>
-                  <thead><tr><th>Time</th><th>Type</th><th>Price</th><th>PnL</th></tr></thead>
+                  <thead><tr><th>Entry Date</th><th>Type</th><th>Entry Price</th><th>Exit Date</th><th>Exit Price</th><th>PnL</th></tr></thead>
                   <tbody>
                     {message.trades.map((t, i) => (
                       <tr key={i}>
                         <td>{t.EntryTime}</td>
                         <td className={t.Size > 0 ? "buy" : "sell"}>{t.Size > 0 ? "LONG" : "SHORT"}</td>
                         <td>{t.EntryPrice?.toFixed(2)}</td>
+                        <td>{t.ExitTime}</td>
+                        <td>{t.ExitPrice?.toFixed(2)}</td>
                         <td className={t.PnL > 0 ? "buy" : "sell"}>{t.PnL?.toFixed(2)}</td>
                       </tr>
                     ))}

@@ -384,6 +384,16 @@
   line-height: 1.5;
 }
 
+.verdict-disclosure {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
 .market-context {
   margin-bottom: 22px;
   padding: 18px;
