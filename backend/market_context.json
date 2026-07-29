@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "new-fiscal-year-2026-seasonal-tailwinds",
+    "scope": "MARKET",
+    "symbol": null,
+    "headline": "New fiscal year: credit expansion, monsoon hydropower output, and Q4 earnings season underway",
+    "message": "Nepal's new fiscal year began in mid-July, historically accompanied by faster loan approvals and easing interest rates as banks reset annual lending targets and disburse fresh credit. August has also historically tended to be a relatively stronger month for NEPSE turnover. Hydropower generators typically post stronger output during the monsoon season due to higher water flow, and many listed companies are releasing annual/Q4 financial reports in this window, which tends to draw retail investor attention and lift trading volume across the board.",
+    "stance": "POSITIVE",
+    "impact": "MEDIUM",
+    "priority": 50,
+    "verdict_label": "SEASONALLY SUPPORTIVE",
+    "verdict_message": "Multiple broad, recurring seasonal factors (fiscal-year credit expansion, monsoon-driven hydropower output, annual earnings season) are active market-wide right now. This context supports but does not replace the technical verdict above -- treat it as directional backdrop, not a standalone signal.",
+    "source_label": "General seasonal market observation (fiscal-year cycle, monsoon hydropower output, annual earnings season)",
+    "source_url": null,
+    "published_at": "2026-07-29",
+    "expires_at": "2026-10-15",
+    "reviewed_by": "QuantifyX Research Team",
+    "status": "PUBLISHED"
+  }
+]
