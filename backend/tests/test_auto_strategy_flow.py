@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from main import test_bollinger
+from main import run_backtest
 from schema import BacktestRequest
 
 
@@ -65,7 +65,7 @@ class AutoStrategyFlowTests(unittest.TestCase):
             auto_strategy=True,
         )
 
-        response = test_bollinger(request, FakeDatabase(self.market_rows()))
+        response = run_backtest(request, FakeDatabase(self.market_rows()))
 
         self.assertEqual(
             [len(call.args[0]) for call in detect_regime.call_args_list],
