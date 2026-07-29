@@ -36,9 +36,6 @@ DEFAULT_DEV_ORIGINS = [
     "http://127.0.0.1:5175",
 ]
 
-# In production set ALLOWED_ORIGINS to the deployed frontend origin(s),
-# comma separated e.g. "https://quantifyx.vercel.app". Wildcards are not
-# usable here because credentials are allowed.
 origins = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", ",".join(DEFAULT_DEV_ORIGINS)).split(",")

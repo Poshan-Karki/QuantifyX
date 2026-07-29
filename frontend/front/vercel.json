@@ -2,7 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "comment": "react-router owns /Ai and /Backtest. Without this, loading or refreshing those URLs directly returns 404, because no such file exists in dist/. Vercel serves real static files (e.g. /assets/*) before applying rewrites, so this does not shadow the bundle.",
       "source": "/(.*)",
       "destination": "/index.html"
     }
