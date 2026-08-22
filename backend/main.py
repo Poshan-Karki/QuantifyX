@@ -116,12 +116,27 @@ def deep_sanitize(obj):
     elif isinstance(obj, (pd.Timestamp, pd.Timedelta)):
         return str(obj)
     return obj
-def apply_trade_params(strategy_cls, req):
-    strategy_cls.fee_pct = req.fee_pct
-    strategy_cls.slippage_pct = req.slippage_pct
-    strategy_cls.max_pos_pct = req.max_pos_pct
-    strategy_cls.cooldown_bars = req.cooldown_bars
-    
+def configure_strategy(strategy_cls, req):
+    """Return a throwaway subclass carrying this request's trade parameters.
+
+    Deliberately does not touch strategy_cls. The strategy classes in
+    Backtest.py are module-level singletons shared by every request, and
+    /bbband is a sync endpoint that FastAPI runs in a threadpool, so writing
+    parameters onto the class lets two overlapping requests run each other's
+    fees and position sizes. Subclassing keeps each request's parameters to
+    itself and leaves the declared defaults intact.
+    """
+    return type(
+        strategy_cls.__name__,
+        (strategy_cls,),
+        {
+            "fee_pct": req.fee_pct,
+            "slippage_pct": req.slippage_pct,
+            "max_pos_pct": req.max_pos_pct,
+            "cooldown_bars": req.cooldown_bars,
+        },
+    )
+
 
 @app.post("/bbband")
 def run_backtest(data: BacktestRequest, db: Session = Depends(get_db)):
@@ -206,7 +221,7 @@ def run_backtest(data: BacktestRequest, db: Session = Depends(get_db)):
     if not strategy_select:
         return {"status": "fail", "message": "Invalid strategy selected"}
 
-    apply_trade_params(strategy_select, data)
+    strategy_select = configure_strategy(strategy_select, data)
 
     bt = Backtest(
     backtest_df,
