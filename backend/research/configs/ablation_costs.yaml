@@ -1,0 +1,37 @@
+# Cost sensitivity (design section 7). Run this file four times, changing only
+# fee_pct/slippage_pct and run_id, to produce the sweep:
+#
+#   costs_0x     fee 0.0   slippage 0.0
+#   costs_1x     fee 0.2   slippage 0.1   (same as baseline)
+#   costs_2x     fee 0.4   slippage 0.2
+#   costs_4x     fee 0.8   slippage 0.4
+#
+# The first question a referee asks is where the edge dies. This is the answer.
+run_id: costs_2x
+data_path: research/data/nepse_snapshot.csv.gz
+output_dir: research/results
+
+scheme: anchored
+train_bars: 750
+test_bars: 60
+embargo_bars: 60
+warmup_bars: 60
+
+features: [log_return, hl_spread, log_vol_rel]
+vol_window: 60
+
+n_components: [2, 3, 4, 5]
+covariance_type: full
+n_iter: 200
+restarts: 10
+
+cash: 100000.0
+fee_pct: 0.4
+slippage_pct: 0.2
+max_pos_pct: 20.0
+cooldown_bars: 3
+
+min_bars: 1500
+min_folds: 3
+
+seed: 20260822

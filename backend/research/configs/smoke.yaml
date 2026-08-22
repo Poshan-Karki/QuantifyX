@@ -1,0 +1,27 @@
+# Fast end-to-end check on a short synthetic snapshot. Not a research result --
+# the windows are far too short to fit a meaningful HMM. Use it to confirm the
+# pipeline runs before committing to a full sweep.
+#
+#   python -m research.runner --config research/configs/smoke.yaml
+run_id: smoke
+data_path: research/data/smoke_snapshot.csv
+output_dir: research/results
+
+scheme: anchored
+train_bars: 250
+test_bars: 40
+embargo_bars: 60
+warmup_bars: 60
+
+features: [log_return, hl_spread, log_vol_rel]
+vol_window: 30
+
+n_components: [2, 3]
+covariance_type: diag
+n_iter: 50
+restarts: 2
+
+min_bars: 400
+min_folds: 1
+
+seed: 1

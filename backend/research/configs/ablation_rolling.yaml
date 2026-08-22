@@ -1,0 +1,27 @@
+# Rolling rather than anchored windows (design section 7).
+#
+# Anchored keeps every bar of history and risks staleness; rolling keeps the
+# window fixed and adapts faster on less data. Which wins on a thin market is an
+# empirical question, and the answer belongs in the paper either way.
+run_id: rolling
+data_path: research/data/nepse_snapshot.csv.gz
+output_dir: research/results
+
+scheme: rolling
+train_bars: 750
+test_bars: 60
+embargo_bars: 60
+warmup_bars: 60
+
+features: [log_return, hl_spread, log_vol_rel]
+vol_window: 60
+
+n_components: [2, 3, 4, 5]
+covariance_type: full
+n_iter: 200
+restarts: 10
+
+min_bars: 1500
+min_folds: 3
+
+seed: 20260822

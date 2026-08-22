@@ -1,0 +1,40 @@
+# Primary specification (design sections 4.5 and 7).
+# Every other config in this directory is this file with one axis changed, so
+# the ablation tables in the paper compare like with like.
+run_id: baseline
+data_path: research/data/nepse_snapshot.csv.gz
+output_dir: research/results
+
+# Walk-forward protocol
+scheme: anchored
+train_bars: 750      # roughly three years
+test_bars: 60
+embargo_bars: 60     # must cover warmup_bars
+warmup_bars: 60      # longest pool lookback is ATRBreakout's 50-bar EMA
+
+# Features
+features: [log_return, hl_spread, log_vol_rel]
+vol_window: 60
+winsor_lower: 0.01
+winsor_upper: 0.99
+
+# HMM
+n_components: [2, 3, 4, 5]   # selected by BIC within each training fold
+covariance_type: full
+n_iter: 200
+tol: 0.0001
+restarts: 10
+
+# Execution
+cash: 100000.0
+fee_pct: 0.2
+slippage_pct: 0.1
+max_pos_pct: 20.0
+cooldown_bars: 3
+
+# Universe
+min_bars: 1500
+min_median_volume: 0.0   # set from the Phase 0 audit distribution, not by taste
+min_folds: 3
+
+seed: 20260822

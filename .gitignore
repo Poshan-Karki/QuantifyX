@@ -8,3 +8,9 @@ __pycache__/
 .git
 *.log
 .vscode/
+
+# Research harness: data snapshots and run outputs are regenerated, not tracked.
+# Snapshots may also be redistribution-restricted -- check NEPSE licensing
+# before committing one.
+backend/research/data/
+backend/research/results/
