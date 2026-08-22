@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI,Depends
 from db import Sessionlocal
-from schema import Symbol
+from schema import HmmRequest
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import pandas as pd
@@ -18,8 +18,7 @@ from market_regime import detect_regime
 from verdict import generate_verdict
 from analysis_split import chronological_holdout, period_details
 from market_context import build_contextual_verdict, resolve_market_context
-from sklearn.preprocessing import StandardScaler
-from hmmlearn.hmm import GaussianHMM
+from hmm_service import describe_regime
 
 
 
@@ -340,37 +339,33 @@ def get_regime(data: BacktestRequest, db: Session = Depends(get_db)):
     return jsonable_encoder(deep_sanitize(regime_data))
     
 @app.post('/hmm')
-async def hmm_learn(symbol:Symbol,db:Session=Depends(get_db)):
-    query=text('SELECT "Open","High","Close","Low","Vol","Date" FROM nepseintel WHERE "Symbol"=:symbol ORDER BY "Date"')
-    result=db.execute(query,{"symbol":symbol.syk.upper()}).fetchall()
+def hmm_learn(data: HmmRequest, db: Session = Depends(get_db)):
+    """Hidden-Markov regime detection for one symbol.
+
+    Sync rather than async on purpose: this does a blocking database read and a
+    CPU-bound fit, both of which would stall the event loop in an async def.
+    FastAPI runs a sync endpoint in a threadpool instead.
+    """
+    symbol = data.sym.upper()
+    query = 'SELECT "Date","Open","High","Low","Close","Vol" FROM nepseintel WHERE "Symbol" = :symbol'
+    params = {"symbol": symbol}
+    if data.startdate is not None:
+        query += ' AND "Date" >= :date'
+        params["date"] = data.startdate
+    query += ' ORDER BY "Date"'
+
+    result = db.execute(text(query), params).fetchall()
     if not result:
-        return {"status":"fail no data"}
-    df=pd.DataFrame(result,columns=['Open','High','Close','Low','Vol','Date'])
-    df['log_return']=np.log(df['Close']/df['Close'].shift(1))
-    df['hl_spread']=(df['High']-df['Low'])/df['Open']
-    df['volume_change']=df['Vol'].pct_change()
-    df.dropna(inplace=True)
-    features=df[['log_return','hl_spread','volume_change']]
-    scaler=StandardScaler()
-    X=scaler.fit_transform(features)
-    model=GaussianHMM(
-        n_components=3,
-        covariance_type='full',
-        n_iter=200
-    )
-    model.fit(X)
-    states =model.predict(X)
-    current_state = int(states[-1])
+        return {"status": "fail", "message": "No data found"}
 
+    df = pd.DataFrame(result, columns=["Date", "Open", "High", "Low", "Close", "Volume"])
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index("Date", inplace=True)
+    df[["Open", "High", "Low", "Close", "Volume"]] =         df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
 
-    tomorrow_probs = model.transmat_[current_state]
+    try:
+        payload = describe_regime(symbol, df)
+    except ValueError as exc:
+        return {"status": "fail", "message": str(exc)}
 
-    tomorrow_state = int(np.argmax(tomorrow_probs))
-
-    return {
-        "status": "success",
-        "states": states.tolist(),
-        "current_state": current_state,
-        "tomorrow_state": tomorrow_state,
-        "tomorrow_probabilities": tomorrow_probs.tolist()
-    }
+    return jsonable_encoder(deep_sanitize(payload))

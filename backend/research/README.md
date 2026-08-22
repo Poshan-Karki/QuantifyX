@@ -3,9 +3,16 @@
 Offline harness for the look-ahead bias study. Implements the published research
 design; section numbers in the module docstrings point back at it.
 
-Nothing here is imported by `main.py`. The API wants a fast cached endpoint, the
-study wants a slow reproducible batch job, and making one serve both is how the
-leak being measured gets reintroduced.
+The API wants a fast cached endpoint, the study wants a slow reproducible batch
+job, and making one serve both is how the leak being measured gets reintroduced.
+So the boundary runs through this package rather than around it:
+
+- **Shared with production.** `features.py`, `hmm_regime.py` and `rule_regime.py`
+  are inference primitives. `backend/hmm_service.py` imports them, so the
+  forward recursion behind `/hmm` is the same tested code the study uses.
+- **Study only.** `arms.py`, `walkforward.py`, `config.py`, `data.py`,
+  `metrics.py` and `runner.py`. No API path imports these, and no request
+  reaches them.
 
 ## Running it
 

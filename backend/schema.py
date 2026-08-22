@@ -3,7 +3,13 @@ from datetime import datetime
 
 
 class Symbol(BaseModel):
+    """Only /hmm used this. Kept so nothing external breaks; see HmmRequest."""
     syk:str
+
+
+class HmmRequest(BaseModel):
+    sym: str
+    startdate: datetime | None = None
     
 
 
