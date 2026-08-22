@@ -706,3 +706,166 @@ td {
     grid-column: auto;
   }
 }
+
+/* ---------------------------------------------------------------
+   HMM regime panel
+   Sits beside the rule-based panel so the two can be compared, and
+   adds the one thing thresholds cannot show: regime over time.
+   --------------------------------------------------------------- */
+
+.hmm-panel {
+  align-items: start;
+}
+
+.hmm-subtitle {
+  display: block;
+  margin-top: 3px;
+  color: #475569;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+}
+
+.hmm-btn {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.16);
+  border: 1px solid rgba(14, 165, 233, 0.45);
+}
+
+.hmm-error {
+  grid-column: 3;
+  color: #fca5a5;
+  font-size: 0.72rem;
+}
+
+.hmm-content {
+  grid-template-columns: minmax(230px, 1.3fr) minmax(230px, 1.1fr) minmax(200px, 1fr);
+  align-items: start;
+  row-gap: 16px;
+}
+
+.hmm-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 7px;
+  color: #64748b;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+}
+
+.hmm-meta {
+  color: #475569;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.hmm-forecast {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+/* --- per-state profile --- */
+
+.hmm-state-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.63rem;
+  white-space: nowrap;
+}
+
+.hmm-state-row.is-active {
+  font-weight: 600;
+}
+
+.hmm-state-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.hmm-state-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hmm-state-stat {
+  color: #64748b;
+  font-family: monospace;
+  font-size: 0.6rem;
+}
+
+/* --- timeline --- */
+
+.hmm-timeline-wrap {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.hmm-timeline {
+  display: flex;
+  gap: 1px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.hmm-segment {
+  min-width: 2px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.hmm-segment:hover {
+  opacity: 1;
+}
+
+.hmm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+}
+
+.hmm-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 0.6rem;
+}
+
+.hmm-note {
+  margin-top: 7px;
+  color: #475569;
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .hmm-content {
+    grid-template-columns: 1fr;
+  }
+
+  .hmm-timeline-wrap {
+    grid-column: auto;
+  }
+
+  .hmm-state-row {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
