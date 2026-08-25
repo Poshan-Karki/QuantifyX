@@ -60,8 +60,21 @@ def highest_high(high, window=20):
     return high.rolling(window).max().values
 
 class BaseStrategy(Strategy):
-    fee_pct = 0.2
-    slippage_pct = 0.1
+    """Shared entry mechanics: position sizing, a cooldown, and a default stop.
+
+    Trading costs deliberately do not live here. Fees and slippage are charged
+    together as a round-trip commission on the Backtest constructor -- see
+    costs.total_cost_pct.
+
+    The previous version expressed slippage as a limit price above the market,
+    which did the opposite of what it looked like. backtesting.py fills a long
+    limit at min(open, limit), so a limit above the market is a cap that can
+    only improve the fill: at slippage 0 entries filled below the bar's open
+    (dodging every gap up), and at high slippage they filled exactly at the open
+    with no penalty at all. Widening the cap also changed which orders filled,
+    so the parameter silently altered the set of trades rather than their cost.
+    """
+
     max_pos_pct = 20.0
     cooldown_bars = 3
 
@@ -84,9 +97,10 @@ class BaseStrategy(Strategy):
         if size <= 0:
             return
         price = self.data.Close[-1]
-        slip_price = price * (1 + self.slippage_pct / 100)
-        stop_loss = sl if sl is not None else slip_price * 0.90
-        self.buy(size=size, limit=slip_price, sl=stop_loss)
+        stop_loss = sl if sl is not None else price * 0.90
+        # Market order: fills at the next bar's open, the earliest price actually
+        # available once this bar's close is known.
+        self.buy(size=size, sl=stop_loss)
         self._last_trade_bar = self._bar_index()
 
 class bollinger_band(BaseStrategy):
