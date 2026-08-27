@@ -8,26 +8,19 @@ uvicorn==0.40.0
 pydantic==2.12.5
 python-dotenv==1.2.1
 
+# Rate limiting (backend/ratelimit.py)
+limits==5.8.0
+
 # Database
 SQLAlchemy==2.0.46
 psycopg2-binary==2.9.11
 
-#  Quant / analytics engine 
+#  Quant / analytics engine
 pandas==3.0.0
 numpy==2.4.2
 backtesting==0.6.5
 ta==0.11.0
 
-#  Regime detection (/hmm, /regime) 
+#  Regime detection (/hmm, /regime)
 scikit-learn==1.9.0
 hmmlearn==0.3.3
-
-#  AI advisor: NOT used by any live endpoint 
-# These are imported only by agent.py, which is unfinished and not wired into
-# main.py. They add roughly a gigabyte to the image. Safe to delete along with
-# agent.py until the advisor ships. Note agent.py also needs langchain-groq,
-# which is not installed or listed here -- another reason it cannot run yet.
-groq==1.0.0
-langchain==1.2.10
-langgraph==1.0.8
-phidata==2.7.10
