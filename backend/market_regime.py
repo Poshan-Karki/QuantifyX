@@ -49,12 +49,28 @@ STRATEGY_DESCRIPTIONS = {
 }
 
 
+#: Shortest history detect_regime can read. The 50-period EMA sampled ten bars
+#: back is what actually binds -- below this the indicators return NaN or the
+#: negative-length slices raise out of ta, and callers saw an opaque IndexError
+#: or "negative dimensions are not allowed" instead of something actionable.
+MIN_REGIME_BARS = 60
+
+
 def detect_regime(df: pd.DataFrame) -> dict:
     """
     df must have columns: Open, High, Low, Close, Volume
     and a DatetimeIndex.
     Returns a dict with regime label, confidence, indicators, and strategy recommendations.
+
+    Raises ValueError when there is too little history, so every caller inherits
+    one clear message rather than each having to guess at the indicator windows.
     """
+    if len(df) < MIN_REGIME_BARS:
+        raise ValueError(
+            f"Regime detection needs at least {MIN_REGIME_BARS} price bars and this "
+            f"period has {len(df)}. Choose an earlier start date."
+        )
+
     close = df["Close"]
     high  = df["High"]
     low   = df["Low"]
