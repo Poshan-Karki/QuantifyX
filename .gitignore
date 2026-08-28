@@ -14,3 +14,8 @@ __pycache__/
 # before committing one.
 backend/research/data/
 backend/research/results/
+
+# Frontend build output and test artifacts
+frontend/front/dist/
+coverage/
+.vitest/
