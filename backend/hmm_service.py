@@ -1,6 +1,6 @@
 """Regime inference for the /hmm endpoint.
 
-Distinct from backend/research/, which exists to measure how misleading the
+Distinct from `backend/research/`, which exists to measure how misleading the
 previous implementation was when used for backtesting. This is the corrected
 production path.
 
@@ -23,11 +23,14 @@ canonical state ordering so "state 2" means the same thing between calls, BIC
 instead of a hardcoded three states, a volume feature that survives zero-volume
 days, and a cache so a request does not refit from scratch.
 
-Inference primitives are shared with research.hmm_regime -- the forward
-recursion, canonical ordering, BIC selection. Those are generic and tested, and
-duplicating them so the API could avoid an import would only create two versions
-to drift apart. The study machinery (arms, folds, runner) is not imported here
-and must never be reachable from a request.
+Inference primitives come from `backend/regime/` -- the forward recursion,
+canonical ordering, BIC selection. Those are generic and tested, and the study
+imports the same code, so the recursion behind `/hmm` and the recursion the
+study measures against cannot drift apart.
+
+The study machinery itself (`backend/research/` -- arms, folds, runner) is not
+imported here and must never be reachable from a request. It also imports from
+`regime`, never the reverse; `ResearchBoundaryTests` asserts both directions.
 """
 
 from __future__ import annotations
@@ -41,8 +44,8 @@ import numpy as np
 import pandas as pd
 
 from market_regime import REGIME_STRATEGY_MAP, STRATEGY_DESCRIPTIONS
-from research.features import LOG_RETURN, RETURN_FEATURE, FeaturePipeline, build_features, usable_range
-from research.hmm_regime import (
+from regime.features import LOG_RETURN, RETURN_FEATURE, FeaturePipeline, build_features, usable_range
+from regime.hmm_regime import (
     canonical_order,
     canonical_params,
     decode_filtered,
@@ -51,7 +54,7 @@ from research.hmm_regime import (
     relabel_states,
     select_n_components,
 )
-from research.rule_regime import (
+from regime.rule_regime import (
     HIGH_VOLATILITY,
     LOW_VOLATILITY,
     RANGING,
@@ -269,6 +272,23 @@ def fit_regime_model(
 _cache: "OrderedDict[tuple, RegimeModel]" = OrderedDict()
 _cache_lock = threading.Lock()
 
+#: One lock per cache key, so concurrent requests for the *same* symbol queue
+#: behind a single fit while requests for *different* symbols run in parallel.
+#: A single global lock held across the fit did the first correctly and the
+#: second not at all -- every symbol serialised behind every other, which on a
+#: seconds-long fit is the difference between slow and unusable.
+_fit_locks: dict[tuple, threading.Lock] = {}
+_fit_locks_guard = threading.Lock()
+
+
+def _lock_for(key: tuple) -> threading.Lock:
+    with _fit_locks_guard:
+        lock = _fit_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _fit_locks[key] = lock
+        return lock
+
 
 def _cache_key(symbol: str, df: pd.DataFrame, settings: HmmSettings) -> tuple:
     """Keyed on the last bar, so a new day's data invalidates it by itself.
@@ -286,28 +306,57 @@ def get_regime_model(
 ) -> tuple[RegimeModel, bool]:
     """Return a fitted model and whether it came from cache.
 
-    The lock is held across the fit rather than only around the dictionary. It
-    means two concurrent first-requests for the same symbol queue instead of
-    fitting twice, which is the behaviour worth having when a fit costs seconds.
+    Two concurrent first-requests for the same symbol queue rather than fitting
+    twice, which is the behaviour worth having when a fit costs seconds. The
+    lock is per-key, so unrelated symbols still fit concurrently.
     """
     key = _cache_key(symbol, df, settings)
+
     with _cache_lock:
         cached = _cache.get(key)
         if cached is not None:
             _cache.move_to_end(key)
             return cached, True
 
+    with _lock_for(key):
+        # Re-check: another thread may have finished this exact fit while we
+        # waited for the lock.
+        with _cache_lock:
+            cached = _cache.get(key)
+            if cached is not None:
+                _cache.move_to_end(key)
+                return cached, True
+
         model = fit_regime_model(symbol, df, settings)
-        _cache[key] = model
-        _cache.move_to_end(key)
-        while len(_cache) > CACHE_SIZE:
-            _cache.popitem(last=False)
-        return model, False
+
+        with _cache_lock:
+            _cache[key] = model
+            _cache.move_to_end(key)
+            while len(_cache) > CACHE_SIZE:
+                _cache.popitem(last=False)
+
+    if len(_fit_locks) > CACHE_SIZE * 2:
+        _prune_fit_locks()
+    return model, False
 
 
 def clear_cache() -> None:
     with _cache_lock:
         _cache.clear()
+    _prune_fit_locks(keep_none=True)
+
+
+def _prune_fit_locks(keep_none: bool = False) -> None:
+    """Drop lock entries nobody is holding.
+
+    The dict is keyed like the cache, so without this it grows by one entry per
+    symbol per day forever. A lock currently held is left alone; it will be
+    collected on a later prune.
+    """
+    with _fit_locks_guard:
+        live = set() if keep_none else set(_cache)
+        for key in [k for k, lock in _fit_locks.items() if k not in live and not lock.locked()]:
+            del _fit_locks[key]
 
 
 # --------------------------------------------------------------------------
