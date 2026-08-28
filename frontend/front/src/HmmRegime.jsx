@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { apiUrl } from "./api";
+import { postJson } from "./api";
 import { regimeColor } from "./regimeColors";
 
 // Collapse the per-bar label series into runs, so the timeline draws one block
@@ -35,13 +35,7 @@ export default function HmmRegime({ sym, onStrategyPick }) {
     try {
       // No startdate on purpose: the model wants every bar it can get, and the
       // backtest window the user picked is often far too short to fit on.
-      const res = await fetch(apiUrl("/hmm"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sym }),
-      });
-      const payload = await res.json();
-      if (payload.status === "fail") throw new Error(payload.message);
+      const payload = await postJson("/hmm", { sym });
       setData(payload);
     } catch (e) {
       setError(e.message);

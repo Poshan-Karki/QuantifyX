@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from "react";
-import { apiUrl } from "./api";
+import { postJson } from "./api";
 import { REGIME_COLORS } from "./regimeColors";
 
 
-export default function MarketRegime({ sym, startdate, investment, onStrategyPick, autoRegime, onRegimeDetected }) {
+export default function MarketRegime({ sym, startdate, onStrategyPick, autoRegime, onRegimeDetected }) {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
@@ -17,13 +17,9 @@ export default function MarketRegime({ sym, startdate, investment, onStrategyPic
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(apiUrl("/regime"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sym, startdate, investment: parseFloat(investment) || 10000, stra: "Bollinger Band" }),
-      });
-      const data = await res.json();
-      if (data.status === "fail") throw new Error(data.message);
+      // /regime takes only what it uses now; it used to borrow the backtest
+      // request model, which forced a dummy investment and strategy through.
+      const data = await postJson("/regime", { sym, startdate });
       setRegime(data);
       onRegimeDetected?.(data);
     } catch (e) {
