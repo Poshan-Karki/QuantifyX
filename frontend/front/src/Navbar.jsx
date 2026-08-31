@@ -1,15 +1,16 @@
 // Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiUrl } from "./api";
+import { getJson } from "./api";
 import './Navbar.css';
 
 function Navbar() {
   const [dataStatus, setDataStatus] = useState(null);
 
   useEffect(() => {
-    fetch(apiUrl("/data-status"))
-      .then((res) => res.json())
+    // A missing status is not worth surfacing here -- the badge just falls back
+    // to its generic label.
+    getJson("/data-status")
       .then((data) => {
         if (data && data.latest_date) setDataStatus(data);
       })
