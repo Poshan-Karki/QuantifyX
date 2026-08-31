@@ -1,0 +1,15 @@
+/* Backtest dashboard styles.
+ *
+ * Split by section so each part is navigable on its own. Imported here in the
+ * original order rather than from each component, because these are global
+ * class names and the cascade depends on that order -- importing from the
+ * components would let the module graph decide it instead.
+ */
+
+@import "./styles/dashboard-shell.css";
+@import "./styles/backtest-form.css";
+@import "./styles/regime-panel.css";
+@import "./styles/results.css";
+@import "./styles/market-context.css";
+@import "./styles/chart-table.css";
+@import "./styles/hmm-panel.css";

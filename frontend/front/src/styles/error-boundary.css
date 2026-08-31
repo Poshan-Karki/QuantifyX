@@ -1,0 +1,57 @@
+/* Self-contained: no shared class names, so this is imported by the component
+ * rather than from the dashboard manifest. */
+
+.error-boundary {
+  max-width: 640px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  color: #cbd5e1;
+}
+
+.error-boundary h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  color: #fca5a5;
+}
+
+.error-boundary p {
+  margin: 0 0 1rem;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.error-boundary pre {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #fecaca;
+}
+
+.error-boundary button {
+  padding: 0.6rem 1.1rem;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.error-boundary button:hover {
+  background: #334155;
+}
+
+.error-boundary button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}

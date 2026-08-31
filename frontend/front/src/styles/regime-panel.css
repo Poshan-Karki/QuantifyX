@@ -1,0 +1,61 @@
+.regime-panel {
+  display: grid;
+  grid-template-columns: 140px 150px 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.regime-title {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+
+.regime-analyze-btn {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.5);
+}
+
+.regime-content {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(200px, 0.9fr) minmax(280px, 1.8fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.regime-summary {
+  padding: 12px 14px;
+}
+
+.regime-summary p {
+  margin-bottom: 0;
+}
+
+.indicator-pills,
+.strategy-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.strategy-recommendations > div:first-child {
+  margin-bottom: 6px !important;
+}
+
+.strategy-pill {
+  margin: 0 !important;
+  padding: 7px 10px !important;
+  border-radius: 20px !important;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.strategy-pill > div:not(:first-child) {
+  display: none;
+}
+

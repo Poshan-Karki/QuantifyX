@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-dark: #050505;
+  --text-main: #ffffff;
+  --text-muted: #777777;
+  --accent: #6366f1;
+  --border-color: #1a1a1a;
+  --mono-font: 'JetBrains Mono', monospace;
+  --nav-height: 80px; /* Must match the height in Navbar.css */
+}
+
+/* THE FIX: This ensures content is not hidden behind the fixed navbar */
+.quantifyx-firm {
+  margin-top: var(--nav-height);
+  background-color: var(--bg-dark);
+  width: 100%;
+  min-height: calc(100vh - var(--nav-height));
+  display: block;
+  overflow: visible;
+}
+
+/* Hero Section Styling */
+.firm-hero {
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  padding: clamp(88px, 10vw, 140px) clamp(24px, 5vw, 64px) clamp(72px, 8vw, 112px);
+}
+
+.hero-content {
+  max-width: 880px;
+}
+
+.sub-title {
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin: 0 0 22px;
+  letter-spacing: 2px;
+}
+
+.firm-hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin: 0 0 28px;
+  color: var(--text-main);
+}
+
+.hero-description {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 650px;
+  margin: 0 0 42px;
+}
+
+/* Button & CTA */
+.action-area {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.btn-firm {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  padding: 18px 40px;
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-firm:hover {
+  background-color: #cccccc;
+  transform: translateY(-2px);
+}
+
+.access-text {
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: #333;
+  letter-spacing: 1px;
+}
+
+/* Grid Layout */
+.technical-specs {
+  width: min(1192px, calc(100% - clamp(48px, 10vw, 128px)));
+  margin: 0 auto;
+  background-color: var(--bg-dark);
+  border-top: 1px solid var(--border-color);
+}
+
+.spec-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0;
+}
+
+.spec-item {
+  padding: clamp(52px, 6vw, 76px) clamp(26px, 3vw, 44px);
+  border-right: 1px solid var(--border-color);
+}
+
+.spec-item:first-child {
+  padding-left: 0;
+}
+
+.spec-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.spec-label {
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 24px;
+}
+
+.spec-item h3 {
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+}
+
+.spec-item p {
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Footer Section */
+.firm-footer {
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  padding: clamp(72px, 8vw, 104px) clamp(24px, 5vw, 64px) 36px;
+  background-color: var(--bg-dark);
+}
+
+.footer-line {
+  height: 1px;
+  background: var(--border-color);
+  margin-bottom: 24px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: #444;
+}
+
+/* Desktop First / Mobile Adjustments */
+@media (max-width: 900px) {
+  .firm-hero {
+    padding-top: 76px;
+  }
+
+  .technical-specs {
+    width: calc(100% - 48px);
+  }
+
+  .spec-row {
+    grid-template-columns: 1fr;
+  }
+
+  .spec-item {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 48px 0;
+  }
+
+  .spec-item:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .firm-hero {
+    padding-top: 60px;
+    padding-bottom: 64px;
+  }
+
+  .firm-hero h1 {
+    font-size: 2.35rem;
+    letter-spacing: -1px;
+  }
+
+  .hero-description {
+    font-size: 1.05rem;
+    margin-bottom: 34px;
+  }
+
+  .action-area,
+  .footer-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .technical-specs {
+    width: calc(100% - 48px);
+  }
+
+  .firm-footer {
+    padding-top: 64px;
+  }
+
+  .footer-right {
+    display: flex;
+    gap: 18px;
+  }
+}
+
+.data-caveat {
+  margin: 2rem 0 0;
+  padding: 1rem 1.25rem;
+  max-width: 80ch;
+  background: rgba(234, 179, 8, 0.08);
+  border-left: 2px solid rgba(234, 179, 8, 0.5);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: #94a3b8;
+}
+
+.data-caveat strong {
+  color: #eab308;
+  font-weight: 600;
+}

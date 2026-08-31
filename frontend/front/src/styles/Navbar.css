@@ -1,0 +1,26 @@
+/* Navbar.css */
+.firm-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #1a1a1a;
+  z-index: 10000;
+}
+
+.firm-logo { text-decoration: none; color: white; font-weight: 900; letter-spacing: 2px; }
+.firm-logo span { color: #6366f1; }
+
+.status-indicator { font-family: monospace; font-size: 10px; color: #555; display: flex; align-items: center; gap: 5px; margin-left: 20px;}
+.dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; box-shadow: 0 0 5px #10b981; }
+
+.nav-links { display: flex; list-style: none; gap: 25px; }
+.nav-links a { text-decoration: none; color: #888; font-size: 13px; text-transform: uppercase; font-family: monospace; transition: 0.2s; }
+.nav-links a:hover { color: white; }
