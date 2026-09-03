@@ -14,6 +14,7 @@ from dataclasses import replace
 from datetime import datetime
 
 import numpy as np
+from fastapi import HTTPException
 
 from hmm_service import (
     HIGH_VOLATILITY,
@@ -29,7 +30,7 @@ from hmm_service import (
 )
 from main import hmm_learn
 from market_regime import REGIME_STRATEGY_MAP, STRATEGY_DESCRIPTIONS
-from research.synthetic import synthetic_ohlcv
+from regime.synthetic import synthetic_ohlcv
 from schema import HmmRequest
 
 #: Small enough to keep the suite quick; not what production uses.
@@ -257,16 +258,19 @@ class EndpointTests(unittest.TestCase):
         self.assertIn(response["regime"], VOCABULARY)
         self.assertEqual(response["symbol"], "SYNTH")
 
-    def test_missing_data_fails_cleanly(self):
-        response = hmm_learn(HmmRequest(sym="nope"), FakeDatabase([]))
+    def test_missing_data_returns_404(self):
+        """Failures are HTTP status codes, not 200s carrying a "fail" body."""
+        with self.assertRaises(HTTPException) as caught:
+            hmm_learn(HmmRequest(sym="nope"), FakeDatabase([]))
 
-        self.assertEqual(response["status"], "fail")
+        self.assertEqual(caught.exception.status_code, 404)
 
-    def test_short_history_fails_cleanly_rather_than_raising(self):
-        response = hmm_learn(HmmRequest(sym="short"), FakeDatabase(rows_from(frame(n_bars=80))))
+    def test_short_history_returns_422_rather_than_raising_raw(self):
+        with self.assertRaises(HTTPException) as caught:
+            hmm_learn(HmmRequest(sym="short"), FakeDatabase(rows_from(frame(n_bars=80))))
 
-        self.assertEqual(response["status"], "fail")
-        self.assertIn("at least", response["message"])
+        self.assertEqual(caught.exception.status_code, 422)
+        self.assertIn("at least", caught.exception.detail)
 
     def test_startdate_is_pushed_into_the_query_rather_than_ignored(self):
         db = FakeDatabase(rows_from(frame()))
@@ -284,43 +288,67 @@ class EndpointTests(unittest.TestCase):
 
 
 class ResearchBoundaryTests(unittest.TestCase):
-    """The API may share inference primitives, never the study machinery.
+    """The dependency runs app -> regime, never app -> research.
 
-    research.hmm_regime and friends are generic, tested HMM code and the API
-    should reuse them rather than keep a second copy of the forward recursion.
-    research.arms and research.runner are the experiment -- they fit on data a
-    live caller has no business seeing, and reaching them from a request would
-    reintroduce exactly the leak the study exists to measure.
+    `regime` holds the inference primitives both sides share: the forward
+    recursion, canonical ordering, BIC selection. The API reuses them rather
+    than keeping a second copy of the recursion, which is the one piece that
+    must not drift.
+
+    `research` is the experiment. Its arms fit on data a live caller has no
+    business seeing, so reaching it from a request would reintroduce exactly the
+    leak the study exists to measure. It is also gitignored -- a deployed
+    checkout does not contain it, so an import would be a hard startup failure,
+    not a subtle one.
     """
 
-    STUDY_ONLY = {
-        "research.arms",
-        "research.walkforward",
-        "research.runner",
-        "research.config",
-        "research.data",
-        "research.metrics",
-        "research.synthetic",
-    }
+    APP_MODULES = ("main.py", "hmm_service.py", "market_regime.py", "costs.py")
 
-    def _imports(self, filename):
+    def _imports(self, path):
         import ast
 
-        tree = ast.parse(pathlib.Path(filename).read_text(encoding="utf-8"))
+        tree = ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
         return {
             node.module
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
 
-    def test_api_modules_do_not_import_the_study_machinery(self):
-        for filename in ("main.py", "hmm_service.py"):
+    def test_app_modules_never_import_the_study(self):
+        for filename in self.APP_MODULES:
             with self.subTest(module=filename):
-                self.assertFalse(self._imports(filename) & self.STUDY_ONLY)
+                offenders = {
+                    m for m in self._imports(filename) if m == "research" or m.startswith("research.")
+                }
+                self.assertFalse(offenders, f"{filename} imports {offenders}")
+
+    def test_the_regime_package_never_imports_the_study(self):
+        """The inversion this layout exists for.
+
+        regime/ must stand alone: research imports from it, not the reverse.
+        If this fails, deleting research/ takes the API down again.
+        """
+        for path in sorted(pathlib.Path("regime").glob("*.py")):
+            with self.subTest(module=path.name):
+                offenders = {
+                    m for m in self._imports(path) if m == "research" or m.startswith("research.")
+                }
+                self.assertFalse(offenders, f"{path} imports {offenders}")
 
     def test_the_service_does_reuse_the_shared_inference_primitives(self):
         """Guards the other direction: a second forward recursion must not appear."""
-        self.assertIn("research.hmm_regime", self._imports("hmm_service.py"))
+        self.assertIn("regime.hmm_regime", self._imports("hmm_service.py"))
+
+    def test_the_app_runs_without_the_research_package_present(self):
+        """The property that makes research/ safe to gitignore.
+
+        Walks every import in the app modules and asserts none of them would
+        fail if research/ were absent from the checkout.
+        """
+        for filename in self.APP_MODULES:
+            for module in self._imports(filename):
+                with self.subTest(module=filename, imports=module):
+                    self.assertFalse(module.split(".")[0] == "research")
 
 
 if __name__ == "__main__":

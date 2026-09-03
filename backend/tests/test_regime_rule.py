@@ -1,6 +1,6 @@
 """Keeps the study's copy of the rule-based classifier honest.
 
-research.rule_regime restates market_regime.detect_regime's thresholds as a
+regime.rule_regime restates market_regime.detect_regime's thresholds as a
 vectorised series, because the study needs a label on every bar and the endpoint
 only reports the latest one. Two copies of the same logic drift. detect_regime
 is the live implementation and stays authoritative, so these tests assert the
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from market_regime import detect_regime
-from research.rule_regime import REGIMES, rule_regime_series
+from regime.rule_regime import REGIMES, rule_regime_series
 
 
 def ohlcv_from_close(close):

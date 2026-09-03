@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
 
-from research.hmm_regime import (
+from regime.hmm_regime import (
     canonical_order,
     decode_filtered,
     decode_smoothed,
@@ -15,7 +15,7 @@ from research.hmm_regime import (
     select_n_components,
     total_loglik,
 )
-from research.synthetic import make_generating_hmm, sample_states
+from regime.synthetic import make_generating_hmm, sample_states
 
 
 class ForwardRecursionTests(unittest.TestCase):
