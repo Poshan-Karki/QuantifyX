@@ -20,8 +20,8 @@ from research.config import (
     ARM_HMM_LEAKED,
     StudyConfig,
 )
-from research.features import FeaturePipeline
-from research.synthetic import synthetic_ohlcv
+from regime.features import FeaturePipeline
+from regime.synthetic import synthetic_ohlcv
 
 N_BARS = 450
 
@@ -61,13 +61,45 @@ class FitProvenanceTests(unittest.TestCase):
 
                 self.assertLess(fitted.fit.fitted_bar_max, fold.test_start)
 
-    def test_honest_arm_never_fits_on_an_embargo_bar_either(self):
-        """The embargo is warm-up for execution, not training data."""
+    def test_honest_arm_never_fits_past_the_training_window(self):
+        """The invariant that survived removing the embargo.
+
+        Folds are contiguous now, so train_end is the test window's first bar
+        and this is the only thing standing between B3 and the leak it exists to
+        measure against. It holds with or without a gap.
+        """
         for fold in self.ctx.folds:
             with self.subTest(fold=fold.index):
                 fitted = fold_fit_labels(self.ctx, fold)
 
                 self.assertLessEqual(fitted.fit.fitted_bar_max, fold.train_end - 1)
+
+    def test_honest_arm_never_fits_past_training_without_an_embargo_either(self):
+        """Same assertion on the protocol the baseline actually runs."""
+        cfg = fast_config(embargo_bars=0)
+        ctx = build_context("SYNTH", self.df, cfg)
+
+        for fold in ctx.folds:
+            with self.subTest(fold=fold.index):
+                fitted = fold_fit_labels(ctx, fold)
+
+                self.assertEqual(fold.embargo_bars, 0)
+                self.assertLessEqual(fitted.fit.fitted_bar_max, fold.train_end - 1)
+                self.assertLess(fitted.fit.fitted_bar_max, fold.test_start)
+
+    def test_the_regime_read_bar_is_never_a_test_bar(self):
+        """Reading at test_start - 1 is fresh, but it must stay out of the window."""
+        for fold in self.ctx.folds:
+            with self.subTest(fold=fold.index):
+                self.assertLess(fold.regime_read_bar, fold.test_start)
+
+    def test_the_honest_arm_labels_the_regime_read_bar(self):
+        """A fresher read point is only usable if the forward decode reaches it."""
+        for fold in self.ctx.folds:
+            with self.subTest(fold=fold.index):
+                labels = fold_fit_labels(self.ctx, fold).labels
+
+                self.assertIsNotNone(labels[fold.regime_read_bar])
 
     def test_honest_arm_labels_every_test_bar(self):
         for fold in self.ctx.folds:
@@ -181,11 +213,19 @@ class FeaturePipelineLeakageTests(unittest.TestCase):
 
 
 class ConfigGuardTests(unittest.TestCase):
-    def test_warmup_longer_than_embargo_is_rejected_at_config_time(self):
-        with self.assertRaises(ValueError) as ctx:
-            fast_config(warmup_bars=90, embargo_bars=60)
+    def test_warmup_longer_than_embargo_is_now_allowed(self):
+        """Warm-up crossing into training is causal, so this is no longer an error."""
+        cfg = fast_config(warmup_bars=90, embargo_bars=0)
 
-        self.assertIn("warm-up", str(ctx.exception))
+        self.assertEqual(cfg.warmup_bars, 90)
+        self.assertEqual(cfg.embargo_bars, 0)
+
+    def test_warmup_that_cannot_fit_before_the_first_test_window_is_rejected(self):
+        """The guard that replaced it: warm-up must not run off the series."""
+        with self.assertRaises(ValueError) as ctx:
+            fast_config(warmup_bars=200, train_bars=200)
+
+        self.assertIn("train_bars", str(ctx.exception))
 
     def test_feature_set_without_a_return_feature_is_rejected(self):
         cfg = fast_config(features=["hl_spread", "log_vol_rel"])

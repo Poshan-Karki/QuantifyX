@@ -1,0 +1,58 @@
+# The previous protocol: a 60-bar gap between training and testing.
+#
+# Kept so the change to contiguous folds is an empirical result rather than an
+# assertion. The baseline runs train -> test with no gap, because an embargo
+# protects against forward-looking labels and this study has none: the HMM is
+# unsupervised and selection scores training-window Sharpe over training bars
+# alone. What the gap did do was age the regime label by its own width.
+#
+# Run this against baseline.yaml and compare two things:
+#
+#   1. max_regime_age_bars in folds.csv -- 120 here against 60 in the baseline.
+#      That is the staleness the gap bought, and it applies to every arm.
+#   2. B2 - B3 in summary.csv, the headline. Expect it to move: a smoke run on
+#      two synthetic symbols shifted every delta substantially between the two
+#      protocols. That run proves only that the choice matters -- n=2, and the
+#      fold counts differ, so the windows are not comparable. It is not a
+#      result, and it is not a justification.
+#
+# Note this config isolates the *gap* alone. The regime read point was fixed
+# separately and is fresh in both: labels are read at test_start - 1 here too,
+# not at train_end - 1 as the original code did. To reproduce the original
+# staleness you would have to revert arms.select_strategy as well.
+#
+# Whichever way this comes out, it belongs in the paper. A protocol change that
+# moves the headline number has to be defended with the comparison, not with a
+# paragraph -- including when the comparison is unflattering to the change.
+run_id: embargo_60
+data_path: research/data/nepse_snapshot.csv.gz
+output_dir: research/results
+
+scheme: anchored
+train_bars: 750
+test_bars: 60
+embargo_bars: 60
+warmup_bars: 60
+
+features: [log_return, hl_spread, log_vol_rel]
+vol_window: 60
+winsor_lower: 0.01
+winsor_upper: 0.99
+
+n_components: [2, 3, 4, 5]
+covariance_type: full
+n_iter: 200
+tol: 0.0001
+restarts: 10
+
+cash: 100000.0
+fee_pct: 0.2
+slippage_pct: 0.1
+max_pos_pct: 20.0
+cooldown_bars: 3
+
+min_bars: 1500
+min_median_volume: 0.0
+min_folds: 3
+
+seed: 20260822

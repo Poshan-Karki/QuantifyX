@@ -14,9 +14,16 @@ from pathlib import Path
 
 import yaml
 
+from costs import (
+    DEFAULT_COOLDOWN_BARS,
+    DEFAULT_FEE_PCT,
+    DEFAULT_MAX_POS_PCT,
+    DEFAULT_SLIPPAGE_PCT,
+)
+
 from .execution import STRATEGY_NAMES, TradeParams
-from .features import DEFAULT_FEATURES
-from .hmm_regime import DEFAULT_N_COMPONENTS
+from regime.features import DEFAULT_FEATURES
+from regime.hmm_regime import DEFAULT_N_COMPONENTS
 from .walkforward import ANCHORED
 
 ARM_BUY_HOLD = "A0"
@@ -45,8 +52,16 @@ class StudyConfig:
     scheme: str = ANCHORED
     train_bars: int = 750
     test_bars: int = 60
-    embargo_bars: int = 60
+    #: Contiguous train -> test by default. The gap is not needed to prevent
+    #: leakage here (no forward-looking label exists to purge) and it aged the
+    #: regime label by its own width. Kept as a knob so the previous design is
+    #: reproducible -- see configs/ablation_embargo.yaml and walkforward.py.
+    embargo_bars: int = 0
     step: int | None = None
+    #: Longest indicator lookback in the strategy pool (ATRBreakout's 50-bar
+    #: EMA), rounded up. Warm-up runs backwards from test_start and may cross
+    #: into training bars: reading a bar's own past is causal, and warm-up bars
+    #: are neither fitted on nor scored.
     warmup_bars: int = 60
 
     # Features (4.2)
@@ -62,12 +77,12 @@ class StudyConfig:
     tol: float = 1e-4
     restarts: int = 10
 
-    # Execution (4.6)
+    # Execution (4.6) -- defaults shared with the API, see backend/costs.py
     cash: float = 100_000.0
-    fee_pct: float = 0.2
-    slippage_pct: float = 0.1
-    max_pos_pct: float = 20.0
-    cooldown_bars: int = 3
+    fee_pct: float = DEFAULT_FEE_PCT
+    slippage_pct: float = DEFAULT_SLIPPAGE_PCT
+    max_pos_pct: float = DEFAULT_MAX_POS_PCT
+    cooldown_bars: int = DEFAULT_COOLDOWN_BARS
 
     # Universe inclusion (3.2)
     min_bars: int = 1500
@@ -85,10 +100,13 @@ class StudyConfig:
         unknown = set(self.arms) - set(ALL_ARMS)
         if unknown:
             raise ValueError(f"unknown arm(s): {sorted(unknown)}; known: {list(ALL_ARMS)}")
-        if self.warmup_bars > self.embargo_bars:
+        if self.warmup_bars < 0:
+            raise ValueError(f"warmup_bars must be non-negative, got {self.warmup_bars}")
+        if self.warmup_bars >= self.train_bars:
             raise ValueError(
-                f"warmup_bars ({self.warmup_bars}) exceeds embargo_bars ({self.embargo_bars}). "
-                "Indicator warm-up would reach into the training window."
+                f"warmup_bars ({self.warmup_bars}) is not shorter than train_bars "
+                f"({self.train_bars}). Warm-up runs backwards from the test window and "
+                "would reach past the start of the series on the first fold."
             )
         if not self.features:
             raise ValueError("at least one feature is required")

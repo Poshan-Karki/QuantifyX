@@ -53,18 +53,75 @@ class GenerateFoldsTests(unittest.TestCase):
 
 
 class ExecutionSliceTests(unittest.TestCase):
-    """Warm-up must come out of the embargo, never out of training data."""
+    """Warm-up runs backwards from the test window and may cross into training.
+
+    Reading a bar's own past is causal. Warm-up bars are neither fitted on nor
+    scored, so the old rule that warm-up had to fit inside the embargo bought
+    nothing and forced the embargo -- and the regime staleness -- to exist.
+    """
 
     def test_execution_slice_starts_warmup_bars_before_the_test_window(self):
         fold = Fold(0, 0, 300, 360, 420)
 
         self.assertEqual(fold.execution_slice(60), slice(300, 420))
 
-    def test_warmup_longer_than_the_embargo_is_rejected(self):
+    def test_warmup_may_reach_into_training_bars(self):
+        """Contiguous fold: warm-up has nowhere to go but the training window."""
+        fold = Fold(0, 0, 300, 300, 360)
+
+        self.assertEqual(fold.execution_slice(60), slice(240, 360))
+
+    def test_warmup_longer_than_the_embargo_is_allowed(self):
         fold = Fold(0, 0, 300, 330, 390)
 
-        with self.assertRaises(ValueError):
+        self.assertEqual(fold.execution_slice(60), slice(270, 390))
+
+    def test_warmup_running_off_the_start_of_the_series_is_rejected(self):
+        fold = Fold(0, 0, 40, 40, 100)
+
+        with self.assertRaises(ValueError) as ctx:
             fold.execution_slice(60)
+
+        self.assertIn("start of the series", str(ctx.exception))
+
+    def test_negative_warmup_is_rejected(self):
+        with self.assertRaises(ValueError):
+            Fold(0, 0, 300, 300, 360).execution_slice(-1)
+
+
+class RegimeReadBarTests(unittest.TestCase):
+    """The regime is read at the last bar before the test window."""
+
+    def test_contiguous_fold_reads_the_last_training_bar(self):
+        fold = Fold(0, 0, 300, 300, 360)
+
+        self.assertEqual(fold.regime_read_bar, 299)
+        self.assertEqual(fold.embargo_bars, 0)
+
+    def test_an_embargo_moves_the_read_bar_forward_not_backward(self):
+        """The old code read train_end - 1 = 299 here, throwing away 60 bars."""
+        fold = Fold(0, 0, 300, 360, 420)
+
+        self.assertEqual(fold.regime_read_bar, 359)
+
+    def test_max_regime_age_is_the_window_length_on_a_contiguous_fold(self):
+        fold = Fold(0, 0, 300, 300, 360)
+
+        self.assertEqual(fold.max_regime_age_bars, 60)
+
+    def test_an_embargo_adds_its_own_width_to_the_staleness(self):
+        fold = Fold(0, 0, 300, 360, 420)
+
+        # Read at 359, held through 419.
+        self.assertEqual(fold.max_regime_age_bars, 60)
+
+    def test_reading_at_the_old_bar_would_have_been_120_bars_stale(self):
+        """What the previous design actually cost, stated as a number."""
+        fold = Fold(0, 0, 300, 360, 420)
+        old_read_bar = fold.train_end - 1
+
+        self.assertEqual(fold.test_end - 1 - old_read_bar, 120)
+        self.assertEqual(fold.max_regime_age_bars, 60)
 
 
 class SoundnessTests(unittest.TestCase):

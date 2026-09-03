@@ -110,6 +110,19 @@ def run_study(cfg: StudyConfig) -> Path:
                     "n_folds": len(outcomes),
                     **summarise(stitched, n_trades=sum(o.n_trades for o in outcomes)),
                     "failed_folds": sum(1 for o in outcomes if not o.ok),
+                    # Label-level diagnostics, carried up from the folds. The
+                    # smoothing leak can measure exactly zero while the labels
+                    # genuinely differ -- persistent regimes make filtered and
+                    # smoothed decoding pick the same strategy -- and then this
+                    # is the only evidence the mechanism exists. It has to sit
+                    # beside the P&L delta, not two files away.
+                    "smoothed_disagreement": _mean_or_nan(
+                        [o.smoothed_disagreement for o in outcomes]
+                    ),
+                    "label_churn": _mean_or_nan([o.label_churn for o in outcomes]),
+                    "max_regime_age_bars": _max_or_nan(
+                        [o.max_regime_age_bars for o in outcomes]
+                    ),
                     "config_hash": config_hash,
                 }
             )
@@ -208,6 +221,16 @@ def _deflate_from_summary(sharpe: float, n_trials: int, variance: float, n_obs: 
     return float(norm.cdf((sharpe - threshold) * np.sqrt(n_obs - 1)))
 
 
+def _mean_or_nan(values: list) -> float:
+    present = [v for v in values if v is not None and not pd.isna(v)]
+    return float(np.mean(present)) if present else float("nan")
+
+
+def _max_or_nan(values: list) -> float:
+    present = [v for v in values if v is not None and not pd.isna(v)]
+    return float(np.max(present)) if present else float("nan")
+
+
 def bias_deltas(summary: pd.DataFrame) -> pd.DataFrame:
     """The headline result: the leak decomposed, per symbol (design section 5)."""
     if summary.empty:
@@ -225,6 +248,24 @@ def bias_deltas(summary: pd.DataFrame) -> pd.DataFrame:
     out["total_leak"] = pivot[ARM_HMM_LEAKED] - pivot[ARM_HMM_HONEST]
     out["smoothing_leak"] = pivot[ARM_HMM_LEAKED] - pivot[ARM_HMM_FIT_LEAKED]
     out["fitting_leak"] = pivot[ARM_HMM_FIT_LEAKED] - pivot[ARM_HMM_HONEST]
+
+    # The label-level channel, beside the P&L channel it explains. A zero
+    # smoothing_leak with a non-zero disagreement rate is a real result -- the
+    # labels differed and the selection rule absorbed it -- not a null.
+    if "smoothed_disagreement" in summary.columns:
+        disagreement = summary.pivot_table(
+            index="symbol", columns="arm", values="smoothed_disagreement"
+        )
+        if ARM_HMM_LEAKED in disagreement.columns:
+            out["label_disagreement_full_fit"] = disagreement[ARM_HMM_LEAKED]
+        if ARM_HMM_HONEST in disagreement.columns:
+            out["label_disagreement_fold_fit"] = disagreement[ARM_HMM_HONEST]
+    if "max_regime_age_bars" in summary.columns:
+        age = summary.pivot_table(
+            index="symbol", columns="arm", values="max_regime_age_bars"
+        )
+        if ARM_HMM_HONEST in age.columns:
+            out["max_regime_age_bars"] = age[ARM_HMM_HONEST]
     if "A2" in pivot.columns:
         out["sharpe_A2_rules"] = pivot["A2"]
         out["hmm_minus_rules"] = pivot[ARM_HMM_HONEST] - pivot["A2"]

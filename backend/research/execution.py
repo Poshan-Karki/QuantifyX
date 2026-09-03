@@ -1,10 +1,12 @@
 """Running strategies over bar ranges, with a per-fold cache.
 
-Note the difference from main.apply_trade_params, which sets fee_pct and friends
-directly on the strategy *class*. That mutation is global and permanent, so
-every later run inherits whichever parameters were applied last. A cost sweep
-built on it would silently compare a strategy against itself. configure() makes
-a throwaway subclass per parameter set instead.
+configure() makes a throwaway subclass per parameter set rather than writing
+onto the strategy class, which is global and permanent -- a cost sweep built on
+class mutation would silently compare a strategy against itself.
+
+Costs come from `costs.commission_fraction`, the same function the API uses, so
+the study and the application cannot drift into measuring different execution
+models.
 """
 
 from __future__ import annotations
@@ -24,6 +26,13 @@ from Backtest import (
     VolumeBreakout,
     bollinger_band,
     macrossover,
+)
+from costs import (
+    DEFAULT_COOLDOWN_BARS,
+    DEFAULT_FEE_PCT,
+    DEFAULT_MAX_POS_PCT,
+    DEFAULT_SLIPPAGE_PCT,
+    commission_fraction,
 )
 
 #: The strategy pool, matching main.run_backtest so the study evaluates exactly
@@ -49,10 +58,10 @@ MAX_LOOKBACK_BARS = 50
 @dataclass
 class TradeParams:
     cash: float = 100_000.0
-    fee_pct: float = 0.2
-    slippage_pct: float = 0.1
-    max_pos_pct: float = 20.0
-    cooldown_bars: int = 3
+    fee_pct: float = DEFAULT_FEE_PCT
+    slippage_pct: float = DEFAULT_SLIPPAGE_PCT
+    max_pos_pct: float = DEFAULT_MAX_POS_PCT
+    cooldown_bars: int = DEFAULT_COOLDOWN_BARS
 
     def key(self) -> tuple:
         return (self.cash, self.fee_pct, self.slippage_pct, self.max_pos_pct, self.cooldown_bars)
@@ -92,13 +101,15 @@ class StrategyRun:
 
 
 def configure(base, params: TradeParams):
-    """Fresh subclass carrying these trade parameters, leaving the base untouched."""
+    """Fresh subclass carrying these sizing parameters, leaving the base untouched.
+
+    Fees and slippage are not set here: they are charged together as the
+    Backtest commission, matching the API.
+    """
     return type(
         base.__name__,
         (base,),
         {
-            "fee_pct": params.fee_pct,
-            "slippage_pct": params.slippage_pct,
             "max_pos_pct": params.max_pos_pct,
             "cooldown_bars": params.cooldown_bars,
         },
@@ -122,7 +133,7 @@ def run_strategy(df: pd.DataFrame, name: str, params: TradeParams) -> StrategyRu
             df,
             configure(STRATEGIES[name], params),
             cash=params.cash,
-            commission=params.fee_pct / 100,
+            commission=commission_fraction(params.fee_pct, params.slippage_pct),
             finalize_trades=True,
         )
         stats = backtest.run()

@@ -10,7 +10,7 @@ output_dir: research/results
 scheme: rolling
 train_bars: 750
 test_bars: 60
-embargo_bars: 60
+embargo_bars: 0
 warmup_bars: 60
 
 features: [log_return, hl_spread, log_vol_rel]

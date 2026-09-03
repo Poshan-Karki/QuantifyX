@@ -35,8 +35,8 @@ from .config import (
     derive_seed,
 )
 from .execution import STRATEGY_NAMES, RunCache, buy_and_hold_returns
-from .features import RETURN_FEATURE, FeaturePipeline, build_features, usable_range
-from .hmm_regime import (
+from regime.features import RETURN_FEATURE, FeaturePipeline, build_features, usable_range
+from regime.hmm_regime import (
     HmmFit,
     canonical_order,
     canonical_params,
@@ -48,7 +48,7 @@ from .hmm_regime import (
     select_n_components,
 )
 from .metrics import masked_sharpe
-from .rule_regime import rule_regime_series
+from regime.rule_regime import rule_regime_series
 from .walkforward import Fold, assert_folds_sound, generate_folds
 
 #: Below this many bars carrying the current label, in-fold Sharpe is too noisy
@@ -205,9 +205,11 @@ def fold_fit_labels(ctx: SymbolContext, fold: Fold) -> FoldFitLabels:
     )
     relabel = order_to_relabel(canonical_order(fit.model, ctx.return_feature_index))
 
-    # Decode forward across training, embargo and test. Row t of the forward
-    # recursion sees observations up to t and no further, so extending the span
-    # past train_end adds no information about the future to any earlier bar.
+    # Decode forward across training, any embargo, and test. Row t of the
+    # forward recursion sees observations up to t and no further, so extending
+    # the span past train_end adds no information about the future to any
+    # earlier bar. This is what makes reading the regime at test_start - 1
+    # legitimate rather than merely convenient.
     span = slice(start, fold.test_end)
     x_span = pipeline.transform(ctx.x_raw[span])
     filtered_states = relabel_states(decode_filtered(fit.model, x_span), relabel)
@@ -250,13 +252,23 @@ def select_strategy(ctx: SymbolContext, fold: Fold, labels: np.ndarray) -> Selec
     confound the labelling scheme with the mapping. A2 here is therefore a
     stronger baseline than the app's behaviour, which is noted in the paper.
 
-    The regime is read at the last training bar and held for the whole test
-    window. Re-reading it each test bar would be closer to live trading, but
+    The regime is read at the last bar before the test window -- fold.
+    regime_read_bar -- and held for the whole window.
+
+    It used to be read at fold.train_end - 1, the last *training* bar. On a
+    contiguous fold those are the same bar, but under the old 60-bar embargo
+    they were 60 apart, and the label was already 60 bars old before the test
+    window opened. Held across a 60-bar window that made it up to 120 bars
+    stale. Nothing forced that: the forward decode already labels every embargo
+    and test bar, and row t of a forward recursion depends only on rows <= t, so
+    the fresher label was both available and causal the whole time.
+
+    Re-reading it each test bar would be closer still to live trading, but
     switching strategies mid-run is not expressible in backtesting.py; with a
-    60-bar test window and a refit every fold, this is the practical
-    approximation. It is a stated limitation, not an oversight.
+    refit every fold this is the practical approximation. That part remains a
+    stated limitation. fold.max_regime_age_bars records what it costs.
     """
-    current = labels[fold.train_end - 1]
+    current = labels[fold.regime_read_bar]
     train_df = ctx.df.iloc[fold.train_slice]
     train_labels = labels[fold.train_slice]
 
@@ -312,6 +324,11 @@ class FoldOutcome:
     train_end: int
     test_start: int
     test_end: int
+    #: Bar the regime was read at, and the label's age at the last bar it
+    #: governs. Recorded so staleness is measurable in the results rather than
+    #: inferred from the config.
+    regime_read_bar: int
+    max_regime_age_bars: int
     strategy: str | None
     regime_label: object
     selection_basis: str | None
@@ -340,7 +357,12 @@ class FoldOutcome:
 
 
 def _execute(ctx: SymbolContext, fold: Fold, strategy: str) -> tuple[pd.Series, int, bool, str | None]:
-    """Run the chosen strategy across the test window, warmed up through the embargo."""
+    """Run the chosen strategy across the test window, after an indicator warm-up.
+
+    The warm-up runs backwards from test_start and may cross into training bars.
+    Only returns from test_start onward are kept, so warm-up bars are never
+    scored -- and they are never fitted on either.
+    """
     warmup = ctx.cfg.warmup_bars
     exec_df = ctx.df.iloc[fold.execution_slice(warmup)]
     run = ctx.cache.get(exec_df, strategy, ("test", fold.index))
@@ -358,6 +380,8 @@ def _outcome(ctx: SymbolContext, arm: str, fold: Fold, **kwargs) -> FoldOutcome:
         train_end=fold.train_end,
         test_start=fold.test_start,
         test_end=fold.test_end,
+        regime_read_bar=fold.regime_read_bar,
+        max_regime_age_bars=fold.max_regime_age_bars,
         **kwargs,
     )
 

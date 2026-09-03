@@ -9,8 +9,8 @@ output_dir: research/results
 scheme: anchored
 train_bars: 750      # roughly three years
 test_bars: 60
-embargo_bars: 60     # must cover warmup_bars
-warmup_bars: 60      # longest pool lookback is ATRBreakout's 50-bar EMA
+embargo_bars: 0       # contiguous train -> test; see walkforward.py
+warmup_bars: 60      # longest pool lookback is ATRBreakout's 50-bar EMA; may reach into training
 
 # Features
 features: [log_return, hl_spread, log_vol_rel]

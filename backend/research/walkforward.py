@@ -1,13 +1,47 @@
 """Walk-forward fold generation (design section 4.5).
 
 Generalises analysis_split.chronological_holdout from a single 70/30 split into
-repeated train/test folds separated by an embargo gap.
+repeated train/test folds, by default contiguous: train ends at bar t, test
+begins at bar t.
 
-The embargo exists so that no test bar shares a rolling indicator window with a
-training bar. It is not dead space: bars in the embargo are the warm-up for the
-indicators evaluated during the test window, which is legitimate because at
-trading time t you genuinely know the bars immediately before t. What embargo
-bars are never used for is fitting anything, or scoring anything.
+On the embargo, which used to default to 60 bars and no longer does.
+
+Its stated purpose was that no test bar should share a rolling indicator window
+with a training bar. That is not leakage. Every feature here is a function of
+bar t and earlier bars only, so a test bar reaching back into training data is
+reading its own past -- exactly what a live trader does at time t. Information
+does not flow backwards across that boundary.
+
+The construction an embargo genuinely protects against is a forward-looking
+label: when a training sample at bar s carries a label computed over [s, s+h]
+and s+h lands inside the test window, the training set contains test-period
+information and must be purged. This study has no such label. The HMM is
+unsupervised, and strategy selection scores training-window Sharpe over training
+bars alone. There is nothing to purge.
+
+What the embargo did buy was distance from serial correlation across the
+boundary -- a real but much weaker concern -- and it charged for it in
+staleness. The regime driving a test window was read before the gap, so with a
+60-bar embargo and a 60-bar test window the label was 60 to 120 bars old in use.
+
+Whether that staleness helped or hurt the measured deltas is an open empirical
+question, and deliberately not answered here. A smoke run on two synthetic
+symbols moved every delta substantially when the gap was restored, which
+establishes only that the protocol choice is consequential -- n=2, different
+fold counts, different test windows, so it is evidence of sensitivity and
+nothing more. Do not cite it.
+
+The change is justified on correctness, not on which number it produces: there
+is no forward-looking label to purge, and a fresher causal label was available
+for free. embargo_bars therefore defaults to 0 and survives as a knob, so the
+previous design stays reproducible and "does the gap change the answer?" gets
+run on real data rather than argued about. See configs/ablation_embargo.yaml,
+and report the comparison in the paper whichever way it comes out.
+
+Warm-up is now a separate concept from the embargo. Indicator warm-up may reach
+back into training bars; it is neither fitted on nor scored, and reading past
+bars is causal. The one invariant that has not moved: no arm may *fit* on a bar
+at or after train_end.
 """
 
 from __future__ import annotations
@@ -24,8 +58,12 @@ class Fold:
     """One walk-forward fold, as half-open integer bar ranges.
 
     [train_start, train_end)  the only bars any fitting step may see
-    [train_end, test_start)   embargo -- indicator warm-up only, never fitted
+    [train_end, test_start)   embargo, empty by default -- never fitted, never scored
     [test_start, test_end)    evaluated out of sample, never fitted
+
+    Indicator warm-up runs backwards from test_start and may cross into either
+    of the earlier ranges. That is causal and deliberate; see the module
+    docstring.
     """
 
     index: int
@@ -47,6 +85,29 @@ class Fold:
         return self.test_start - self.train_end
 
     @property
+    def regime_read_bar(self) -> int:
+        """The bar whose label selects the strategy for this fold's test window.
+
+        The last bar before the test window, not the last *training* bar. With a
+        contiguous fold these coincide; with an embargo they do not, and reading
+        at train_end - 1 threw away labels that were both available and causal.
+        """
+        return self.test_start - 1
+
+    @property
+    def max_regime_age_bars(self) -> int:
+        """Age of the regime label at the last bar it still governs.
+
+        The label is read once and held across the test window, so this is the
+        worst case, not the average. On a contiguous 60-bar fold it is 60; under
+        the old 60-bar embargo with the read at train_end - 1 it was 120.
+
+        Recorded per fold so staleness is a measured quantity in the results
+        rather than an assumption in a docstring.
+        """
+        return self.test_end - 1 - self.regime_read_bar
+
+    @property
     def train_slice(self) -> slice:
         return slice(self.train_start, self.train_end)
 
@@ -57,16 +118,28 @@ class Fold:
     def execution_slice(self, warmup_bars: int) -> slice:
         """Bars to feed the backtester so test-window indicators are warm.
 
-        Starts warmup_bars before the test window -- inside the embargo, which is
-        sized to cover exactly this. Only returns from test_start onward are
-        scored; see metrics.trim_to_test.
+        Starts warmup_bars before the test window. It may cross the embargo and
+        run on into training bars, which is intended: computing an indicator at
+        bar t from bars at or before t is what happens live, and those bars are
+        in t's past whatever window they were assigned to. They are never fitted
+        on and never scored -- only returns from test_start onward count, see
+        metrics.trim_to_test.
+
+        This used to raise when warmup exceeded the embargo, which forced the
+        embargo to be at least as wide as the longest indicator lookback and so
+        forced the staleness described in the module docstring.
         """
-        if warmup_bars > self.embargo_bars:
+        if warmup_bars < 0:
+            raise ValueError(f"warmup_bars must be non-negative, got {warmup_bars}")
+
+        start = self.test_start - warmup_bars
+        if start < 0:
             raise ValueError(
-                f"warmup_bars ({warmup_bars}) exceeds the embargo ({self.embargo_bars}). "
-                "Widen embargo_bars so indicator warm-up cannot reach into training data."
+                f"fold {self.index}: warm-up of {warmup_bars} bars reaches back past the "
+                f"start of the series from test_start {self.test_start}. Increase "
+                "train_bars, or shorten warmup_bars."
             )
-        return slice(self.test_start - warmup_bars, self.test_end)
+        return slice(start, self.test_end)
 
 
 def generate_folds(
@@ -74,7 +147,7 @@ def generate_folds(
     scheme: str = ANCHORED,
     train_bars: int = 750,
     test_bars: int = 60,
-    embargo_bars: int = 60,
+    embargo_bars: int = 0,
     step: int | None = None,
 ) -> list[Fold]:
     """Build the fold sequence for a series of n_bars.
@@ -114,7 +187,7 @@ def generate_folds(
     return folds
 
 
-def required_bars(train_bars: int, test_bars: int, embargo_bars: int, min_folds: int = 1) -> int:
+def required_bars(train_bars: int, test_bars: int, embargo_bars: int = 0, min_folds: int = 1) -> int:
     """Minimum series length that yields min_folds folds, for inclusion criteria."""
     if min_folds < 1:
         raise ValueError(f"min_folds must be at least 1, got {min_folds}")
