@@ -135,8 +135,7 @@ def data_status(db: Session = Depends(get_db)):
     }
 
 
-# The symbol list changes at most once a day, but was being recomputed with a
-# full GROUP BY over the price table on every page load.
+
 _symbol_cache: dict = {"day": None, "symbols": None}
 _symbol_cache_lock = threading.Lock()
 
