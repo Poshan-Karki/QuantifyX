@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getJson } from "./api";
-import './Navbar.css';
+import './styles/Navbar.css';
 
 function Navbar() {
   const [dataStatus, setDataStatus] = useState(null);

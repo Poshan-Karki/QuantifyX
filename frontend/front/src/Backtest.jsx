@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Chart from "./Chart";
-import "./Backtest.css";
+import "./styles/Backtest.css";
 import MarketRegime from "./MarketRegime";
 import HmmRegime from "./HmmRegime";
 import MarketContext from "./MarketContext";

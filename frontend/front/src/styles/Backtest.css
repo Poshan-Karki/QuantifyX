@@ -6,10 +6,10 @@
  * components would let the module graph decide it instead.
  */
 
-@import "./styles/dashboard-shell.css";
-@import "./styles/backtest-form.css";
-@import "./styles/regime-panel.css";
-@import "./styles/results.css";
-@import "./styles/market-context.css";
-@import "./styles/chart-table.css";
-@import "./styles/hmm-panel.css";
+@import "./dashboard-shell.css";
+@import "./backtest-form.css";
+@import "./regime-panel.css";
+@import "./results.css";
+@import "./market-context.css";
+@import "./chart-table.css";
+@import "./hmm-panel.css";
